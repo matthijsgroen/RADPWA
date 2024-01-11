@@ -1,9 +1,10 @@
 import React from "react";
+import Screen from "./user-interface.rui";
 
 export const App = () => {
   return (
     <div>
-      <p>Hello world</p>
+      <Screen />
     </div>
   );
 };

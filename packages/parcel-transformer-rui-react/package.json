@@ -1,0 +1,14 @@
+{
+  "name": "@rui/parcel-transformer-rui-react",
+  "main": "dist/transformer.js",
+  "source": "src/transformer.ts",
+  "devDependencies": {
+    "parcel": "2.11.0"
+  },
+  "dependencies": {
+    "@parcel/plugin": "2.11.0"
+  },
+  "scripts": {
+    "build": "parcel build"
+  }
+}

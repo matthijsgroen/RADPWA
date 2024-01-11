@@ -1,9 +1,10 @@
 {
   "targetDefaults": {
     "start": {
-      "dependsOn": [
-        "^start"
-      ]
+      "dependsOn": ["^start"]
+    },
+    "build": {
+      "dependsOn": ["^build"]
     }
   },
   "affected": {

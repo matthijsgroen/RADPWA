@@ -1120,6 +1120,14 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rui/parcel-transformer-rui-react@workspace:packages/parcel-transformer-rui-react":
+  version: 0.0.0-use.local
+  resolution: "@rui/parcel-transformer-rui-react@workspace:packages/parcel-transformer-rui-react"
+  dependencies:
+    parcel: "npm:2.11.0"
+  languageName: unknown
+  linkType: soft
+
 "@sinclair/typebox@npm:^0.27.8":
   version: 0.27.8
   resolution: "@sinclair/typebox@npm:0.27.8"
@@ -3243,7 +3251,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"parcel@npm:^2.11.0":
+"parcel@npm:2.11.0, parcel@npm:^2.11.0":
   version: 2.11.0
   resolution: "parcel@npm:2.11.0"
   dependencies:

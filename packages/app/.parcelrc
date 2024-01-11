@@ -1,0 +1,9 @@
+{
+  "extends": "@parcel/config-default",
+  "transformers": {
+    "*.rui": [
+      "...",
+      "@rui/parcel-transformer-rui-react"
+    ]
+  }
+}
