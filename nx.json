@@ -1,0 +1,12 @@
+{
+  "targetDefaults": {
+    "start": {
+      "dependsOn": [
+        "^start"
+      ]
+    }
+  },
+  "affected": {
+    "defaultBase": "master"
+  }
+}
