@@ -1,23 +1,17 @@
 import { Transformer } from "@parcel/plugin";
+import { compiler } from "./compiler";
 
 export default new Transformer({
   async transform({ asset }) {
     // Retrieve the asset's source code and source map.
-    // let source = await asset.getCode();
+    let source = await asset.getCode();
     let sourceMap = await asset.getMap();
 
     // Run it through some compiler, and set the results
     // on the asset.
-    let code = `
-        const item = () => {
-            return (
-                <p>Hello World</p>
-            )
-        };
 
-        export default item;
-    `;
-    asset.setCode(code);
+    const interfaceConfig = JSON.parse(source);
+    asset.setCode(compiler(interfaceConfig));
     asset.setMap(sourceMap);
     asset.type = "tsx";
 
