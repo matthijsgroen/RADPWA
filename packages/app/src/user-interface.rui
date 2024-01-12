@@ -1,19 +1,26 @@
 {
-    "id": "mainScreen",
+  "id": "mainScreen",
+  "children": {
     "canvas": {
-        "component": "primereact/panel:Panel",
-        "props": {
-            "header": "Header"
-        },
-        "children": {
-            "p1": {
-                "component": "p",
-                "children": {
-                    "t1": {
-                        "text": "Lorem Ipsum"
-                    }
-                }
-            }
+      "dependencies": [
+        "primereact/panel:Panel"
+      ],
+      "component": "Panel",
+      "props": {
+        "header": {
+          "type": "string",
+          "value": "Header"
         }
+      },
+      "children": [
+        {
+          "dependencies": [],
+          "component": "p",
+          "children": [
+            "Lorem Ipsum dolor sit amed"
+          ]
+        }
+      ]
     }
+  }
 }
