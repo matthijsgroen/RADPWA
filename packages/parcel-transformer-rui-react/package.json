@@ -6,7 +6,11 @@
     "parcel": "2.11.0"
   },
   "dependencies": {
-    "@parcel/plugin": "2.11.0"
+    "@parcel/plugin": "2.11.0",
+    "prettier": "^3.2.2"
+  },
+  "engines": {
+    "parcel": "2.x"
   },
   "scripts": {
     "build": "parcel build"

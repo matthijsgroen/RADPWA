@@ -2,7 +2,15 @@ import { Transformer } from "@parcel/plugin";
 import { compiler } from "./compiler";
 
 export default new Transformer({
-  async transform({ asset }) {
+  async loadConfig({ config }) {
+    const { contents } = await config.getConfig<string>(["rapidui.config.js"], {
+      parse: true,
+    });
+
+    return contents;
+  },
+
+  async transform({ asset, config }) {
     // Retrieve the asset's source code and source map.
     let source = await asset.getCode();
     let sourceMap = await asset.getMap();
@@ -11,7 +19,8 @@ export default new Transformer({
     // on the asset.
 
     const interfaceConfig = JSON.parse(source);
-    asset.setCode(compiler(interfaceConfig));
+    const result = await compiler(interfaceConfig, config);
+    asset.setCode(result);
     asset.setMap(sourceMap);
     asset.type = "tsx";
 

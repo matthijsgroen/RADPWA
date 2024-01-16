@@ -1,12 +1,55 @@
-const valueToCode = (value) =>
-  value.type === "string" ? `"${value.value}"` : `"unknown"`;
+import * as prettier from "prettier";
+
+const valueToCode = (value) => {
+  switch (value.type) {
+    case "string": {
+      return `"${value.value}"`;
+    }
+    case "type": {
+      return value.value;
+    }
+  }
+  return '"unknown"';
+};
+
+const buildDataComponent = ({ props, id, component }, configuration) => {
+  const componentDefinition = configuration.components.find(
+    (c) => c.name === component,
+  );
+  if (!componentDefinition) {
+    throw new Error(`Component definition for ${component} not found`);
+  }
+
+  const dependencies = componentDefinition.dependencies.map(
+    (d) => `${d}:${component}`,
+  );
+  const evaluatedProps = Object.fromEntries(
+    Object.entries(props).map(([key, value]) => [key, valueToCode(value)]),
+  );
+
+  const code = componentDefinition.transform({
+    id,
+    properties: evaluatedProps,
+    dependencies: dependencies.map((d) => d.split(":")[2]),
+  });
+
+  return {
+    id,
+    name: component,
+    code,
+    dependencies,
+  };
+};
 
 const buildProps = (props) =>
   Object.entries(props)
     .map(([key, value]) => ` ${key}={${valueToCode(value)}}`)
     .join(" ");
 
-const buildComponent = ({ component, props, children, dependencies }) => {
+const buildVisualComponent = (
+  { component, props, children = [], id },
+  configuration,
+) => {
   const codeProps = props ? buildProps(props) : "";
 
   const childDependencies = [];
@@ -15,51 +58,72 @@ const buildComponent = ({ component, props, children, dependencies }) => {
     if (typeof c === "string") {
       return c;
     }
-    const comp = buildComponent(c);
+    const comp = buildVisualComponent(c, configuration);
     childDependencies.push(...comp.dependencies);
-
     return comp.code;
   });
+
+  const componentDefinition = configuration.components.find(
+    (c) => c.name === component,
+  );
+
   return {
+    id,
     name: component,
-    code: `<${component}${codeProps}>${childrenCode.join("")}</${component}>`,
-    dependencies: dependencies.concat(childDependencies),
+    code:
+      childrenCode.length === 0
+        ? `<${component}${codeProps}/>`
+        : `<${component}${codeProps}>${childrenCode.join("")}</${component}>`,
+    dependencies: (componentDefinition
+      ? componentDefinition.dependencies.map((d) => `${d}:${component}`)
+      : []
+    ).concat(childDependencies),
   };
 };
 
-export const compiler = (configFile) => {
-  const mainId = configFile["id"];
+export const compiler = async (interfaceFile, configuration) => {
+  const mainId = interfaceFile["id"];
 
-  const children = Object.entries(configFile.children).map(
-    ([key, componentDesc]) => {
-      return {
-        id: key,
-        ...buildComponent(componentDesc),
-      };
-    }
+  const children = interfaceFile.children.map((visualComponent) =>
+    buildVisualComponent(visualComponent, configuration),
   );
 
-  const code = `
-        ${children
-          .flatMap(({ dependencies, name }) =>
-            dependencies.map((statement) => {
-              const [entry, importName] = statement.split(":");
-              if (importName === name) {
-                return `import { ${importName} } from "${entry}";`;
-              }
-              return `import { ${importName} as ${name} } from "${entry}";`;
-            })
-          )
+  const components = interfaceFile.components.map((component) =>
+    buildDataComponent(component, configuration),
+  );
+
+  const dependencies = children
+    .flatMap((child) => child.dependencies)
+    .concat(components.flatMap((comp) => comp.dependencies));
+
+  const code = await prettier.format(
+    `
+        ${dependencies
+          .map((statement) => {
+            const [entry, importName, componentName] = statement.split(":");
+            if (importName === componentName) {
+              return `import { ${componentName} } from "${entry}";`;
+            }
+            if (importName === "default") {
+              return `import ${componentName} from "${entry}";`;
+            }
+            return `import { ${importName} as ${componentName} } from "${entry}";`;
+          })
           .join("\n")}
 
+
         const ${mainId} = () => {
+            ${components.map((e) => e.code)}
+
             return (
                 ${children.map((e) => e.code)}
             )
         };
 
         export default ${mainId};
-    `;
+    `,
+    { parser: "typescript" },
+  );
   console.log(code);
 
   return code;

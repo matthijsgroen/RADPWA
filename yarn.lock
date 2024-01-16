@@ -1124,7 +1124,9 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@rui/parcel-transformer-rui-react@workspace:packages/parcel-transformer-rui-react"
   dependencies:
+    "@parcel/plugin": "npm:2.11.0"
     parcel: "npm:2.11.0"
+    prettier: "npm:^3.2.2"
   languageName: unknown
   linkType: soft
 
@@ -3382,6 +3384,15 @@ __metadata:
     posthtml-parser: "npm:^0.11.0"
     posthtml-render: "npm:^3.0.0"
   checksum: 0505cb70ece051206ffa932394181372be6390a974fd2f50e4e6fdd5d11e41feffba9a5f5e22809ca42899f79bd489d53ceac1d7ad0d782db9521b578e5b7f5a
+  languageName: node
+  linkType: hard
+
+"prettier@npm:^3.2.2":
+  version: 3.2.2
+  resolution: "prettier@npm:3.2.2"
+  bin:
+    prettier: bin/prettier.cjs
+  checksum: e84d0d2a4ce2b88ee1636904effbdf68b59da63d9f887128f2ed5382206454185432e7c0a9578bc4308bc25d099cfef47fd0b9c211066777854e23e65e34044d
   languageName: node
   linkType: hard
 

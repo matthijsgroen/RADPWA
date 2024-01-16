@@ -1,10 +1,24 @@
 {
   "id": "mainScreen",
-  "children": {
-    "canvas": {
-      "dependencies": [
-        "primereact/panel:Panel"
-      ],
+  "components": [
+    {
+      "id": "user",
+      "component": "ComponentState",
+      "props": {
+        "stateModel": {
+          "type": "type",
+          "value": "string"
+        },
+        "value": {
+          "type": "string",
+          "value": "Internal State"
+        }
+      }
+    }
+  ],
+  "children": [
+    {
+      "id": "canvas",
       "component": "Panel",
       "props": {
         "header": {
@@ -17,10 +31,29 @@
           "dependencies": [],
           "component": "p",
           "children": [
-            "Lorem Ipsum dolor sit amed"
+            "State Value: {user.value}"
           ]
+        },
+        {
+          "dependencies": [
+            "primereact/button:Button"
+          ],
+          "id": "testButton",
+          "component": "Button",
+          "props": {
+            "label": {
+              "type": "string",
+              "value": "Foo"
+            }
+          },
+          "events": {
+            "onClick": {
+              "type": "functionReference",
+              "value": "testButtonClick"
+            }
+          }
         }
       ]
     }
-  }
+  ]
 }
