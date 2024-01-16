@@ -3,11 +3,13 @@
   "main": "dist/transformer.js",
   "source": "src/transformer.ts",
   "devDependencies": {
+    "@types/node": "^20.11.4",
     "parcel": "2.11.0"
   },
   "dependencies": {
     "@parcel/plugin": "2.11.0",
-    "prettier": "^3.2.2"
+    "prettier": "^3.2.2",
+    "typescript": "~5.3.3"
   },
   "engines": {
     "parcel": "2.x"

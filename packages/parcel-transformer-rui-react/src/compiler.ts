@@ -1,95 +1,26 @@
 import * as prettier from "prettier";
+import * as ts from "typescript";
+import { buildDataComponent } from "./compile/dataComponent";
+import { buildVisualComponent } from "./compile/visualComponent";
+import { buildDependencies } from "./compile/dependencies";
+import { buildHandlers } from "./compile/logic";
 
-const valueToCode = (value) => {
-  switch (value.type) {
-    case "string": {
-      return `"${value.value}"`;
-    }
-    case "type": {
-      return value.value;
-    }
-  }
-  return '"unknown"';
-};
-
-const buildDataComponent = ({ props, id, component }, configuration) => {
-  const componentDefinition = configuration.components.find(
-    (c) => c.name === component,
-  );
-  if (!componentDefinition) {
-    throw new Error(`Component definition for ${component} not found`);
-  }
-
-  const dependencies = componentDefinition.dependencies.map(
-    (d) => `${d}:${component}`,
-  );
-  const evaluatedProps = Object.fromEntries(
-    Object.entries(props).map(([key, value]) => [key, valueToCode(value)]),
-  );
-
-  const code = componentDefinition.transform({
-    id,
-    properties: evaluatedProps,
-    dependencies: dependencies.map((d) => d.split(":")[2]),
-  });
-
-  return {
-    id,
-    name: component,
-    code,
-    dependencies,
-  };
-};
-
-const buildProps = (props) =>
-  Object.entries(props)
-    .map(([key, value]) => ` ${key}={${valueToCode(value)}}`)
-    .join(" ");
-
-const buildVisualComponent = (
-  { component, props, children = [], id },
-  configuration,
-) => {
-  const codeProps = props ? buildProps(props) : "";
-
-  const childDependencies = [];
-
-  const childrenCode = children.map((c) => {
-    if (typeof c === "string") {
-      return c;
-    }
-    const comp = buildVisualComponent(c, configuration);
-    childDependencies.push(...comp.dependencies);
-    return comp.code;
-  });
-
-  const componentDefinition = configuration.components.find(
-    (c) => c.name === component,
-  );
-
-  return {
-    id,
-    name: component,
-    code:
-      childrenCode.length === 0
-        ? `<${component}${codeProps}/>`
-        : `<${component}${codeProps}>${childrenCode.join("")}</${component}>`,
-    dependencies: (componentDefinition
-      ? componentDefinition.dependencies.map((d) => `${d}:${component}`)
-      : []
-    ).concat(childDependencies),
-  };
-};
-
-export const compiler = async (interfaceFile, configuration) => {
+export const compiler = async (interfaceFile, configuration, logicCodePath) => {
   const mainId = interfaceFile["id"];
 
+  let logicBlocks: Record<string, string> = {};
+  const program = ts.createProgram([logicCodePath], { allowJs: true });
+  const sourceFile = program.getSourceFile(logicCodePath);
+  if (sourceFile) {
+    logicBlocks = buildHandlers(sourceFile);
+  }
+
   const children = interfaceFile.children.map((visualComponent) =>
-    buildVisualComponent(visualComponent, configuration),
+    buildVisualComponent(visualComponent, configuration, logicBlocks),
   );
 
   const components = interfaceFile.components.map((component) =>
-    buildDataComponent(component, configuration),
+    buildDataComponent(component, configuration, logicBlocks),
   );
 
   const dependencies = children
@@ -98,19 +29,7 @@ export const compiler = async (interfaceFile, configuration) => {
 
   const code = await prettier.format(
     `
-        ${dependencies
-          .map((statement) => {
-            const [entry, importName, componentName] = statement.split(":");
-            if (importName === componentName) {
-              return `import { ${componentName} } from "${entry}";`;
-            }
-            if (importName === "default") {
-              return `import ${componentName} from "${entry}";`;
-            }
-            return `import { ${importName} as ${componentName} } from "${entry}";`;
-          })
-          .join("\n")}
-
+        ${buildDependencies(dependencies)}
 
         const ${mainId} = () => {
             ${components.map((e) => e.code)}
