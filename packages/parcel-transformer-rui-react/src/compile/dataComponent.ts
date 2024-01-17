@@ -15,6 +15,7 @@ export const buildDataComponent = (
   const dependencies = componentDefinition.dependencies.map(
     (d) => `${d}:${component}`,
   );
+
   const evaluatedProps = Object.fromEntries(
     Object.entries(props).map(([key, value]) => [
       key,

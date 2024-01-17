@@ -11,7 +11,7 @@
         },
         "value": {
           "type": "string",
-          "value": "Internal State"
+          "value": "Hello"
         }
       }
     }
@@ -28,16 +28,12 @@
       },
       "children": [
         {
-          "dependencies": [],
           "component": "p",
           "children": [
             "State Value: {user.value}"
           ]
         },
         {
-          "dependencies": [
-            "primereact/button:Button"
-          ],
           "id": "testButton",
           "component": "Button",
           "props": {

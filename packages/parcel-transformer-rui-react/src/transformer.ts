@@ -1,7 +1,6 @@
 import { Transformer } from "@parcel/plugin";
 import { compiler } from "./compiler";
 import { dirname, join, basename, extname } from "path";
-import { readFile } from "fs/promises";
 
 export default new Transformer({
   async loadConfig({ config }) {
@@ -16,9 +15,6 @@ export default new Transformer({
     // Retrieve the asset's source code and source map.
     let source = await asset.getCode();
     let sourceMap = await asset.getMap();
-
-    // Run it through some compiler, and set the results
-    // on the asset.
 
     const logicFileName = `${basename(asset.filePath, extname(asset.filePath))}.events.ts`;
     const logicFilePath = join(dirname(asset.filePath), logicFileName);

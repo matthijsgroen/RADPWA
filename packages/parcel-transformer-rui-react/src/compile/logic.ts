@@ -30,7 +30,6 @@ const selectAll = (nodes: ts.Node[], selector: ts.SyntaxKind[]): ts.Node[] => {
 type FilterResult = { start: number; end: number };
 const filterScope = (node: ts.Node): FilterResult[] => {
   const result: FilterResult[] = [];
-  let updatedNode = node;
   if (ts.isPropertyAccessExpression(node)) {
     if (
       ts.isIdentifier(node.expression) &&
@@ -40,7 +39,14 @@ const filterScope = (node: ts.Node): FilterResult[] => {
     }
   }
 
-  ts.forEachChild(updatedNode, (node) => result.push(...filterScope(node)));
+  ts.forEachChild(
+    node,
+    (child) => result.push(...filterScope(child)),
+    (embedded) => {
+      embedded.forEach((child) => result.push(...filterScope(child)));
+      return undefined;
+    },
+  );
   return result;
 };
 
@@ -59,7 +65,7 @@ export const buildHandlers = (
         start: f.start - handler.initializer.pos,
         end: f.end - handler.initializer.pos,
       }))
-      .sort((a, b) => a.start - b.start);
+      .sort((a, b) => b.start - a.start);
 
     const handlerCode = printer.printNode(
       ts.EmitHint.Unspecified,

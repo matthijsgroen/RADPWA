@@ -4,7 +4,7 @@ type Scope = {
 
 export default (scope: Scope) => ({
   testButtonClick: (e: React.MouseEvent) => {
-    scope.user.value = "Hello there!";
-    console.log("Wooohooo");
+    console.log("Wooohooo", scope.user.value);
+    scope.user.value = "World";
   },
 });
