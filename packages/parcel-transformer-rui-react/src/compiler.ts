@@ -32,10 +32,12 @@ export const compiler = async (interfaceFile, configuration, logicCodePath) => {
         ${buildDependencies(dependencies)}
 
         const ${mainId} = () => {
-            ${components.map((e) => e.code)}
+            ${components.map((e) => e.code).join("\n")}
 
             return (
-                ${children.map((e) => e.code)}
+              ${children.length > 1 ? "<>" : ""}
+              ${children.map((e) => e.code).join("\n")}
+              ${children.length > 1 ? "</>" : ""}
             )
         };
 

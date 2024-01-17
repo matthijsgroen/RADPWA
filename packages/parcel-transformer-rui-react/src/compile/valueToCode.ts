@@ -8,6 +8,9 @@ export const valueToCode = <T>(
     case "string": {
       return `"${value.value}"`;
     }
+    case "number": {
+      return value.value;
+    }
     case "type": {
       return value.value;
     }

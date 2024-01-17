@@ -1,53 +1,64 @@
 {
   "id": "mainScreen",
-  "components": [
-    {
-      "id": "user",
-      "component": "ComponentState",
-      "props": {
-        "stateModel": {
-          "type": "type",
-          "value": "string"
-        },
-        "value": {
-          "type": "string",
-          "value": "Hello"
-        }
-      }
-    }
-  ],
+  "components": [],
   "children": [
     {
-      "id": "canvas",
-      "component": "Panel",
+      "id": "split1",
+      "component": "SplitterPanel",
       "props": {
-        "header": {
-          "type": "string",
-          "value": "Header"
+        "firstMinSize": {
+          "type": "number",
+          "value": 20
         }
       },
-      "children": [
+      "first": [
         {
-          "component": "p",
+          "id": "leftPane",
+          "component": "Pane",
           "children": [
-            "State Value: {user.value}"
+            {
+              "id": "viewTree",
+              "component": "Panel",
+              "props": {
+                "header": {
+                  "type": "string",
+                  "value": "View"
+                }
+              }
+            },
+            {
+              "id": "t1",
+              "component": "Text",
+              "children": [
+                "Left Panel"
+              ]
+            }
           ]
-        },
+        }
+      ],
+      "second": [
         {
-          "id": "testButton",
-          "component": "Button",
-          "props": {
-            "label": {
-              "type": "string",
-              "value": "Foo"
+          "id": "split2",
+          "component": "SplitterPanel",
+          "props": {},
+          "first": [
+            {
+              "id": "t2",
+              "component": "Text",
+              "children": [
+                "Center Panel"
+              ]
             }
-          },
-          "events": {
-            "onClick": {
-              "type": "functionReference",
-              "value": "testButtonClick"
+          ],
+          "second": [
+            {
+              "id": "t3",
+              "component": "Text",
+              "children": [
+                "Right Panel"
+              ]
             }
-          }
+          ]
         }
       ]
     }

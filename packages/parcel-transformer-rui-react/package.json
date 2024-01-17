@@ -2,6 +2,7 @@
   "name": "@rui/parcel-transformer-rui-react",
   "main": "dist/transformer.js",
   "source": "src/transformer.ts",
+  "types": "dist/index.d.ts",
   "devDependencies": {
     "@types/node": "^20.11.4",
     "parcel": "2.11.0"
