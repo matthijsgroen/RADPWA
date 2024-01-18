@@ -1,5 +1,5 @@
+/** @type {import('@rui/rui-react').Config} */
 module.exports = {
-  projectName: "My Rapid UI",
   componentLibraries: [],
   components: [
     {
@@ -98,6 +98,7 @@ module.exports = {
         stateModel: { type: "editor" },
         value: { type: "editor" },
       },
+      produces: (config) => config.properties.stateModel.value,
       hidden: true,
       // type ?
       transform: (config) =>

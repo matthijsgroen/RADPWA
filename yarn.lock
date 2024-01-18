@@ -1244,6 +1244,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@rui/rui-react@workspace:packages/rui-react":
+  version: 0.0.0-use.local
+  resolution: "@rui/rui-react@workspace:packages/rui-react"
+  dependencies:
+    "@types/node": "npm:^20.11.4"
+    parcel: "npm:2.11.0"
+    prettier: "npm:^3.2.2"
+    typescript: "npm:~5.3.3"
+  languageName: unknown
+  linkType: soft
+
 "@sinclair/typebox@npm:^0.27.8":
   version: 0.27.8
   resolution: "@sinclair/typebox@npm:0.27.8"

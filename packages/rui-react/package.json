@@ -1,20 +1,15 @@
 {
-  "name": "@rui/parcel-transformer-rui-react",
-  "main": "dist/transformer.js",
-  "source": "src/transformer.ts",
+  "name": "@rui/rui-react",
+  "main": "dist/compiler.js",
+  "source": "src/compiler.ts",
   "types": "dist/index.d.ts",
   "devDependencies": {
     "@types/node": "^20.11.4",
     "parcel": "2.11.0"
   },
   "dependencies": {
-    "@rui/rui-react": "*",
-    "@parcel/plugin": "2.11.0",
     "prettier": "^3.2.2",
     "typescript": "~5.3.3"
-  },
-  "engines": {
-    "parcel": "2.x"
   },
   "scripts": {
     "build": "parcel build"

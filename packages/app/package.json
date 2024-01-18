@@ -8,6 +8,7 @@
   },
   "devDependencies": {
     "parcel": "^2.11.0",
+    "@rui/rui-react": "*",
     "postcss": "^8.4.33",
     "tailwindcss": "^3.4.1"
   },

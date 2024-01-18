@@ -1,5 +1,5 @@
 import { Transformer } from "@parcel/plugin";
-import { compiler } from "./compiler";
+import { compiler } from "@rui/rui-react";
 import { dirname, join, basename, extname } from "path";
 
 export default new Transformer({

@@ -4,6 +4,7 @@ import { buildDataComponent } from "./compile/dataComponent";
 import { buildVisualComponent } from "./compile/visualComponent";
 import { buildDependencies } from "./compile/dependencies";
 import { buildHandlers } from "./compile/logic";
+export type { Config } from "./Config";
 
 export const compiler = async (interfaceFile, configuration, logicCodePath) => {
   const mainId = interfaceFile["id"];
