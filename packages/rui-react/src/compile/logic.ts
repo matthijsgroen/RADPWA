@@ -1,15 +1,17 @@
 import * as ts from "typescript";
 
 const s = ts.SyntaxKind;
-const selector = [
-  s.ExportAssignment,
-  s.ArrowFunction,
+const exportSelector = [s.ExportAssignment, s.ArrowFunction] as const;
+const propertyChainSelector = [
   s.ParenthesizedExpression,
   s.ObjectLiteralExpression,
   s.PropertyAssignment,
-];
+] as const;
 
-const selectAll = (nodes: ts.Node[], selector: ts.SyntaxKind[]): ts.Node[] => {
+const selectAll = <R extends ts.Node>(
+  nodes: ts.Node[],
+  selector: readonly [...ts.SyntaxKind[], R["kind"]],
+): R[] => {
   const [first, ...rest] = selector;
 
   const found: ts.Node[] = [];
@@ -22,61 +24,73 @@ const selectAll = (nodes: ts.Node[], selector: ts.SyntaxKind[]): ts.Node[] => {
   );
 
   if (rest.length === 0 || found.length === 0) {
-    return found;
+    return found as R[];
   }
-  return selectAll(found, rest);
-};
-
-type FilterResult = { start: number; end: number };
-const filterScope = (node: ts.Node): FilterResult[] => {
-  const result: FilterResult[] = [];
-  if (ts.isPropertyAccessExpression(node)) {
-    if (
-      ts.isIdentifier(node.expression) &&
-      node.expression.escapedText === "scope"
-    ) {
-      result.push({ start: node.expression.pos, end: node.expression.end });
-    }
-  }
-
-  ts.forEachChild(
-    node,
-    (child) => result.push(...filterScope(child)),
-    (embedded) => {
-      embedded.forEach((child) => result.push(...filterScope(child)));
-      return undefined;
-    },
-  );
-  return result;
+  return selectAll(found, rest as [...ts.SyntaxKind[], R["kind"]]);
 };
 
 export const buildHandlers = (
   sourceFile: ts.SourceFile,
+  program: ts.Program,
 ): Record<string, string> => {
   const result: Record<string, string> = {};
-  const handlers = selectAll([sourceFile], selector) as ts.PropertyAssignment[];
+  const scopedHandlers = selectAll<ts.ArrowFunction>(
+    [sourceFile],
+    exportSelector,
+  )[0];
+
+  const typeChecker = program.getTypeChecker();
+  const definedScope = scopedHandlers.parameters[0];
+
+  const isScope = (identifier: ts.Identifier) => {
+    const symbol = typeChecker.getSymbolAtLocation(identifier);
+    return symbol?.declarations?.includes(definedScope) ?? false;
+  };
+
+  const transformerFactory: ts.TransformerFactory<ts.Node> = (
+    context: ts.TransformationContext,
+  ) => {
+    return (rootNode) => {
+      function visit(node: ts.Node): ts.Node {
+        node = ts.visitEachChild(node, visit, context);
+
+        if (
+          ts.isPropertyAccessExpression(node) &&
+          ts.isIdentifier(node.expression) &&
+          isScope(node.expression)
+        ) {
+          return node.name;
+        } else {
+          return node;
+        }
+      }
+
+      return ts.visitNode(rootNode, visit);
+    };
+  };
+
+  const handlers = selectAll<ts.PropertyAssignment>(
+    [scopedHandlers],
+    propertyChainSelector,
+  );
 
   const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
-  handlers.forEach((handler) => {
-    const handlerName = `${(handler.name as ts.Identifier).escapedText}`;
 
-    const filterResult = filterScope(handler.initializer)
-      .map((f) => ({
-        start: f.start - handler.initializer.pos,
-        end: f.end - handler.initializer.pos,
-      }))
-      .sort((a, b) => b.start - a.start);
+  handlers.forEach((handler) => {
+    const handlerName = ts.isIdentifier(handler.name)
+      ? `${handler.name.escapedText}`
+      : "unknown";
+    const transformationResult = ts.transform(handler.initializer, [
+      transformerFactory,
+    ]);
 
     const handlerCode = printer.printNode(
       ts.EmitHint.Unspecified,
-      handler.initializer,
+      transformationResult.transformed[0],
       sourceFile,
     );
 
-    const filteredCode = filterResult.reduce((code, filter) => {
-      return code.slice(0, filter.start) + code.slice(filter.end);
-    }, handlerCode);
-    result[handlerName] = filteredCode;
+    result[handlerName] = handlerCode;
   });
   return result;
 };

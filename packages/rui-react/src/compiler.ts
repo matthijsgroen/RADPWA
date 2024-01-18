@@ -12,8 +12,10 @@ export const compiler = async (interfaceFile, configuration, logicCodePath) => {
   let logicBlocks: Record<string, string> = {};
   const program = ts.createProgram([logicCodePath], { allowJs: true });
   const sourceFile = program.getSourceFile(logicCodePath);
+
   if (sourceFile) {
-    logicBlocks = buildHandlers(sourceFile);
+    logicBlocks = buildHandlers(sourceFile, program);
+    console.log(logicBlocks);
   }
 
   const children = interfaceFile.children.map((visualComponent) =>
@@ -46,7 +48,7 @@ export const compiler = async (interfaceFile, configuration, logicCodePath) => {
     `,
     { parser: "typescript" },
   );
-  console.log(code);
+  // console.log(code);
 
   return code;
 };
