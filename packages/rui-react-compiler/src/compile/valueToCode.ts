@@ -17,7 +17,14 @@ export const valueToCode = <T>(
       return { code: `${value.value}`, dependencies: [] };
     }
     case "functionReference": {
-      return logicBlocks[value.value as string];
+      const result = logicBlocks[value.value as string];
+
+      return (
+        result ?? {
+          code: `() => { throw new Error('handler "${value.value}" not specified.'); }`,
+          dependencies: [],
+        }
+      );
     }
     case "dataReference": {
       return { code: `${value.value}`, dependencies: [] };
