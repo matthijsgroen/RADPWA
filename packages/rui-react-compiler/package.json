@@ -1,5 +1,6 @@
 {
-  "name": "@rui/rui-react",
+  "name": "@rui/react-compiler",
+  "version": "1.0.0-alpha",
   "main": "dist/compiler.js",
   "source": "src/compiler.ts",
   "types": "dist/index.d.ts",

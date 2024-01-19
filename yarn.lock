@@ -1244,9 +1244,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rui/rui-react@workspace:packages/rui-react":
+"@rui/react-compiler@workspace:packages/rui-react-compiler":
   version: 0.0.0-use.local
-  resolution: "@rui/rui-react@workspace:packages/rui-react"
+  resolution: "@rui/react-compiler@workspace:packages/rui-react-compiler"
   dependencies:
     "@types/node": "npm:^20.11.4"
     parcel: "npm:2.11.0"

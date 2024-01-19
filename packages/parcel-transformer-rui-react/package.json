@@ -1,5 +1,6 @@
 {
   "name": "@rui/parcel-transformer-rui-react",
+  "version": "1.0.0-alpha",
   "main": "dist/transformer.js",
   "source": "src/transformer.ts",
   "types": "dist/index.d.ts",
@@ -8,8 +9,8 @@
     "parcel": "2.11.0"
   },
   "dependencies": {
-    "@rui/rui-react": "*",
     "@parcel/plugin": "2.11.0",
+    "@rui/react-compiler": "*",
     "prettier": "^3.2.2",
     "typescript": "~5.3.3"
   },

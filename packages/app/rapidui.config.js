@@ -1,4 +1,4 @@
-/** @type {import('@rui/rui-react').Config} */
+/** @type {import('@rui/react-compiler').Config} */
 module.exports = {
   componentLibraries: [],
   components: [
