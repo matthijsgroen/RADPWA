@@ -37,8 +37,8 @@ module.exports = {
       transform: ({ dependencies }, { hasChildren, toChildrenString }) =>
         `<${dependencies[0]} 
           ${hasChildren("start") ? `start={<>${toChildrenString("start")}</>}` : ""}
-          ${hasChildren("center") ? `start={<>${toChildrenString("center")}</>}` : ""}
-          ${hasChildren("end") ? `start={<>${toChildrenString("end")}</>}` : ""}
+          ${hasChildren("center") ? `center={<>${toChildrenString("center")}</>}` : ""}
+          ${hasChildren("end") ? `end={<>${toChildrenString("end")}</>}` : ""}
         />
         `,
     },

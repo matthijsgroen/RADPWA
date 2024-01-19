@@ -1,4 +1,5 @@
-import { valueToCode } from "./valueToCode";
+import { emptyLogicMap } from "./logic";
+import { buildProps } from "./properties";
 
 export const buildDataComponent = (
   { props = {}, id, component, events = {} },
@@ -16,30 +17,29 @@ export const buildDataComponent = (
     (d) => `${d}:${component}`,
   );
 
-  const evaluatedProps = Object.fromEntries(
-    Object.entries(props).map(([key, value]) => [
-      key,
-      valueToCode(value, logicBlocks),
-    ]),
-  );
-  const evaluatedEvents = Object.fromEntries(
-    Object.entries(events).map(([key, value]) => [
-      key,
-      valueToCode(value, logicBlocks),
-    ]),
-  );
+  const evaluatedProps = props
+    ? buildProps(props, logicBlocks)
+    : emptyLogicMap();
+  const evaluatedEvents = events
+    ? buildProps(events, logicBlocks)
+    : emptyLogicMap();
 
   const code = componentDefinition.transform({
     id,
-    properties: evaluatedProps,
-    events: evaluatedEvents,
+    properties: evaluatedProps.map,
+    events: evaluatedEvents.map,
     dependencies: dependencies.map((d) => d.split(":")[2]),
   });
+
+  const fullDependencies = dependencies.concat(
+    ...evaluatedProps.dependencies,
+    ...evaluatedEvents.dependencies,
+  );
 
   return {
     id,
     name: component,
     code,
-    dependencies,
+    dependencies: fullDependencies,
   };
 };

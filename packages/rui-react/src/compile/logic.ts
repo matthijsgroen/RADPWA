@@ -32,8 +32,8 @@ const selectAll = <R extends ts.Node>(
 export const buildHandlers = (
   sourceFile: ts.SourceFile,
   program: ts.Program,
-): Record<string, string> => {
-  const result: Record<string, string> = {};
+): LogicBlocks => {
+  const result: LogicBlocks = {};
   const scopedHandlers = selectAll<ts.ArrowFunction>(
     [sourceFile],
     exportSelector,
@@ -69,6 +69,38 @@ export const buildHandlers = (
     };
   };
 
+  const collectDependencies = (node: ts.Node): string[] => {
+    const dependencies: string[] = [];
+
+    const visit = (node: ts.Node) =>
+      ts.forEachChild(
+        node,
+        (child) => {
+          if (ts.isIdentifier(child)) {
+            const symbol = typeChecker.getSymbolAtLocation(child);
+            const importSpecifier = symbol?.declarations?.[0];
+            if (importSpecifier && ts.isImportSpecifier(importSpecifier)) {
+              const importDeclaration = importSpecifier.parent;
+              const declaration = importDeclaration.parent.parent;
+
+              const module = declaration.moduleSpecifier.getText().slice(1, -1);
+              const importName = importSpecifier.name.text;
+              const name = importSpecifier.propertyName?.text ?? importName;
+
+              dependencies.push(`${module}:${name}:${importName}`);
+            }
+          }
+          visit(child);
+        },
+        (nodes) => {
+          nodes.forEach((node) => visit(node));
+        },
+      );
+
+    visit(node);
+    return dependencies;
+  };
+
   const handlers = selectAll<ts.PropertyAssignment>(
     [scopedHandlers],
     propertyChainSelector,
@@ -89,8 +121,26 @@ export const buildHandlers = (
       transformationResult.transformed[0],
       sourceFile,
     );
+    const dependencies = collectDependencies(handler.initializer);
 
-    result[handlerName] = handlerCode;
+    result[handlerName] = {
+      code: handlerCode,
+      dependencies,
+    };
   });
   return result;
 };
+
+export type LogicBlocks = Record<string, Logic>;
+
+export type Logic = {
+  code: string;
+  dependencies: string[];
+};
+
+export type LogicMap = {
+  map: Record<string, string>;
+  dependencies: string[];
+};
+
+export const emptyLogicMap = (): LogicMap => ({ map: {}, dependencies: [] });

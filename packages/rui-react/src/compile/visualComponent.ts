@@ -1,12 +1,5 @@
-import { valueToCode } from "./valueToCode";
-
-const buildProps = (props, logicBlocks) =>
-  Object.fromEntries(
-    Object.entries(props).map(([key, value]) => [
-      key,
-      valueToCode(value, logicBlocks),
-    ]),
-  );
+import { emptyLogicMap } from "./logic";
+import { buildProps } from "./properties";
 
 const flattenProps = (props) =>
   Object.entries(props)
@@ -32,14 +25,18 @@ export const buildVisualComponent = (
   configuration,
   logicBlocks,
 ) => {
-  const evaluatedProps = props ? buildProps(props, logicBlocks) : {};
-  const evaluatedEvents = events ? buildProps(events, logicBlocks) : {};
+  const evaluatedProps = props
+    ? buildProps(props, logicBlocks)
+    : emptyLogicMap();
+  const evaluatedEvents = events
+    ? buildProps(events, logicBlocks)
+    : emptyLogicMap();
 
   const componentDefinition = configuration.components.find(
     (c) => c.name === component,
   );
 
-  const childDependencies = [];
+  const childDependencies: string[] = [];
   const childContainers = {};
 
   const containerNames =
@@ -61,15 +58,15 @@ export const buildVisualComponent = (
   const transform = componentDefinition.transform ?? defaultTransform;
   const componentName = componentDefinition.componentName ?? component;
 
-  const dependencies = (componentDefinition.dependencies ?? []).map(
+  const dependencies: string[] = (componentDefinition.dependencies ?? []).map(
     (d) => `${d}:${componentName}`,
   );
 
   const componentData = {
     id,
     componentName,
-    properties: evaluatedProps,
-    events: evaluatedEvents,
+    properties: evaluatedProps.map,
+    events: evaluatedEvents.map,
     childContainers,
     dependencies: dependencies.map((d) => d.split(":")[2]),
   };
@@ -91,6 +88,10 @@ export const buildVisualComponent = (
     id,
     name: component,
     code: transform(componentData, helpers),
-    dependencies: dependencies.concat(childDependencies),
+    dependencies: dependencies.concat(
+      childDependencies,
+      evaluatedEvents.dependencies,
+      evaluatedProps.dependencies,
+    ),
   };
 };

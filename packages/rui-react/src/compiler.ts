@@ -4,18 +4,18 @@ import { buildDataComponent } from "./compile/dataComponent";
 import { buildVisualComponent } from "./compile/visualComponent";
 import { buildDependencies } from "./compile/dependencies";
 import { buildHandlers } from "./compile/logic";
+import { LogicBlocks } from "./compile/types";
 export type { Config } from "./Config";
 
 export const compiler = async (interfaceFile, configuration, logicCodePath) => {
   const mainId = interfaceFile["id"];
 
-  let logicBlocks: Record<string, string> = {};
+  let logicBlocks: LogicBlocks;
   const program = ts.createProgram([logicCodePath], { allowJs: true });
   const sourceFile = program.getSourceFile(logicCodePath);
 
   if (sourceFile) {
     logicBlocks = buildHandlers(sourceFile, program);
-    console.log(logicBlocks);
   }
 
   const children = interfaceFile.children.map((visualComponent) =>

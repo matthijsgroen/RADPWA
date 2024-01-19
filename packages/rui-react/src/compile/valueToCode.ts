@@ -1,36 +1,64 @@
-type ValueType<T> = { type: string; value: T };
+import { Logic, LogicBlocks } from "./types";
+
+export type ValueType<T> = { type: string; value: T };
 
 export const valueToCode = <T>(
   value: ValueType<T>,
-  logicBlocks: Record<string, string>,
-) => {
+  logicBlocks: LogicBlocks,
+): Logic => {
   switch (value.type) {
     case "string": {
-      return `"${value.value}"`;
+      return { code: `"${value.value}"`, dependencies: [] };
     }
     case "number": {
-      return value.value;
+      return { code: `${value.value}`, dependencies: [] };
     }
     case "type": {
-      return value.value;
+      return { code: `${value.value}`, dependencies: [] };
     }
     case "functionReference": {
       return logicBlocks[value.value as string];
     }
     case "dataReference": {
-      return value.value;
+      return { code: `${value.value}`, dependencies: [] };
     }
     case "Object": {
       // Should handle sub processing of elements
       if (Array.isArray(value.value)) {
-        return `[${value.value.map((v) => valueToCode(v, logicBlocks)).join(", ")}]`;
+        const logic = value.value.reduce<Logic>(
+          (result, item, index) => {
+            const itemLogic = valueToCode(item, logicBlocks);
+            return {
+              code: `${result.code}${index > 0 ? "," : ""}${itemLogic.code}`,
+              dependencies: result.dependencies.concat(itemLogic.dependencies),
+            };
+          },
+          {
+            code: "",
+            dependencies: [],
+          },
+        );
+        return {
+          code: `[${logic.code}]`,
+          dependencies: logic.dependencies,
+        };
       }
-      return `{${Object.entries(
+      const deps: string[] = [];
+
+      const code = `{${Object.entries(
         value.value as Record<string, ValueType<string>>,
       )
-        .map(([k, v]) => `${k}: ${valueToCode(v, logicBlocks)}`)
+        .map(([k, v]) => {
+          const { code, dependencies } = valueToCode(v, logicBlocks);
+          deps.push(...dependencies);
+          return `${k}: ${code}`;
+        })
         .join(", ")}}`;
+      return {
+        code,
+        dependencies: deps,
+      };
     }
   }
-  return '"unknown"';
+  return { code: '"unknown"', dependencies: [] };
 };
