@@ -17,6 +17,20 @@ export const valueToCode = <T>(
     case "functionReference": {
       return logicBlocks[value.value as string];
     }
+    case "dataReference": {
+      return value.value;
+    }
+    case "Object": {
+      // Should handle sub processing of elements
+      if (Array.isArray(value.value)) {
+        return `[${value.value.map((v) => valueToCode(v, logicBlocks)).join(", ")}]`;
+      }
+      return `{${Object.entries(
+        value.value as Record<string, ValueType<string>>,
+      )
+        .map(([k, v]) => `${k}: ${valueToCode(v, logicBlocks)}`)
+        .join(", ")}}`;
+    }
   }
   return '"unknown"';
 };

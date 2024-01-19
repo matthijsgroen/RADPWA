@@ -1,7 +1,7 @@
 import { valueToCode } from "./valueToCode";
 
 export const buildDataComponent = (
-  { props, id, component },
+  { props = {}, id, component, events = {} },
   configuration,
   logicBlocks,
 ) => {
@@ -22,10 +22,17 @@ export const buildDataComponent = (
       valueToCode(value, logicBlocks),
     ]),
   );
+  const evaluatedEvents = Object.fromEntries(
+    Object.entries(events).map(([key, value]) => [
+      key,
+      valueToCode(value, logicBlocks),
+    ]),
+  );
 
   const code = componentDefinition.transform({
     id,
     properties: evaluatedProps,
+    events: evaluatedEvents,
     dependencies: dependencies.map((d) => d.split(":")[2]),
   });
 

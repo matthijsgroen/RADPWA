@@ -16,7 +16,7 @@ module.exports = {
       category: "Data",
       dependencies: ["primereact/tree:Tree"],
       properties: {
-        dataSource: { type: "TTreeDataSource" },
+        value: { type: "TreeNode[]" },
       },
     },
     {
@@ -98,11 +98,40 @@ module.exports = {
         stateModel: { type: "editor" },
         value: { type: "editor" },
       },
-      produces: (config) => config.properties.stateModel.value,
+      produces: (config) => `{ value: ${config.properties.stateModel.value} }`,
       hidden: true,
-      // type ?
       transform: (config) =>
         `const ${config.id} = ${config.dependencies[0]}<${config.properties.stateModel}>(${config.properties.value});`,
+    },
+    {
+      name: "StaticTreeData",
+      category: "Data",
+      dependencies: ["primereact/treenode:TreeNode"],
+      properties: {
+        value: { type: "editor" },
+      },
+      produces: () => "TreeNode[]",
+      hidden: true,
+      transform: (config) =>
+        `const ${config.id}: TreeNode[] = ${config.properties.value};`,
+    },
+    {
+      name: "TreeDataProducer",
+      category: "Data",
+      dependencies: [
+        "~src/components/useTreeData:useTreeData:useTreeData",
+        "primereact/treenode:TreeNode:TreeNode",
+      ],
+      events: {
+        onCreateTreeData: {
+          type: "functionReference",
+          returnType: "Promise<TreeNode[]>",
+        },
+      },
+      produces: () => "TreeNode[]",
+      hidden: true,
+      transform: (config) =>
+        `const ${config.id}: ${config.dependencies[1]}[] = ${config.dependencies[0]}({ getTreeData: ${config.events.onCreateTreeData} });`,
     },
   ],
 };

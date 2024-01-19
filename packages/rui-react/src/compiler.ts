@@ -48,7 +48,7 @@ export const compiler = async (interfaceFile, configuration, logicCodePath) => {
     `,
     { parser: "typescript" },
   );
-  // console.log(code);
+  console.log(code);
 
   return code;
 };

@@ -1,6 +1,31 @@
 {
   "id": "mainScreen",
-  "components": [],
+  "components": [
+    {
+      "id": "user",
+      "component": "ComponentState",
+      "props": {
+        "stateModel": {
+          "type": "type",
+          "value": "string"
+        },
+        "value": {
+          "type": "string",
+          "value": "Initial value"
+        }
+      }
+    },
+    {
+      "id": "treeSource",
+      "component": "TreeDataProducer",
+      "events": {
+        "onCreateTreeData": {
+          "type": "functionReference",
+          "value": "treeSourceCreateTreeData"
+        }
+      }
+    }
+  ],
   "children": [
     {
       "id": "split1",
@@ -24,7 +49,35 @@
                   "type": "string",
                   "value": "View"
                 }
-              }
+              },
+              "children": [
+                {
+                  "id": "viewTree",
+                  "component": "Tree",
+                  "props": {
+                    "value": {
+                      "type": "dataReference",
+                      "value": "treeSource"
+                    }
+                  }
+                },
+                {
+                  "id": "demoButton",
+                  "component": "Button",
+                  "props": {
+                    "label": {
+                      "type": "string",
+                      "value": "Demo button"
+                    }
+                  },
+                  "events": {
+                    "onClick": {
+                      "type": "functionReference",
+                      "value": "demoButtonClick"
+                    }
+                  }
+                }
+              ]
             },
             {
               "id": "t1",
@@ -46,7 +99,7 @@
               "id": "t2",
               "component": "Text",
               "children": [
-                "Center Panel"
+                "Center Panel: {user.value}"
               ]
             }
           ],
