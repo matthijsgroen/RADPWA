@@ -1,4 +1,4 @@
-import { Logic, LogicBlocks } from "./types";
+import { Logic, LogicBlocks } from "./logic";
 
 export type ValueType<T> = { type: string; value: T };
 
