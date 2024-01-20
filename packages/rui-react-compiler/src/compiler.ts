@@ -4,6 +4,7 @@ import { buildDataComponent } from "./compile/dataComponent";
 import { buildVisualComponent } from "./compile/visualComponent";
 import { buildDependencies } from "./compile/dependencies";
 import { LogicBlocks, buildHandlers } from "./compile/logic";
+import { generateLogicFile } from "./compile/eventFileGenerator";
 export type { Config } from "./Config";
 
 export const compiler = async (interfaceFile, configuration, logicCodePath) => {
@@ -25,29 +26,27 @@ export const compiler = async (interfaceFile, configuration, logicCodePath) => {
     buildDataComponent(component, configuration, logicBlocks),
   );
 
+  console.log("generating logic file...");
+  const logicFile = await generateLogicFile(interfaceFile, configuration);
+  console.log(logicFile);
+
   const dependencies = children
     .flatMap((child) => child.dependencies)
     .concat(components.flatMap((comp) => comp.dependencies));
 
   const code = await prettier.format(
-    `
-        ${buildDependencies(dependencies)}
-
-        const ${mainId} = () => {
-            ${components.map((e) => e.code).join("\n")}
-
-            return (
-              ${children.length > 1 ? "<>" : ""}
-              ${children.map((e) => e.code).join("\n")}
-              ${children.length > 1 ? "</>" : ""}
-            )
-        };
-
-        export default ${mainId};
+    `${buildDependencies(dependencies)}
+    const ${mainId} = () => {
+    ${components.map((e) => e.code).join("\n")}
+    return (
+    ${children.length > 1 ? "<>" : ""}
+    ${children.map((e) => e.code).join("\n")}
+    ${children.length > 1 ? "</>" : ""}
+    )}; export default ${mainId};
     `,
     { parser: "typescript" },
   );
-  console.log(code);
+  // console.log(code);
 
   return code;
 };

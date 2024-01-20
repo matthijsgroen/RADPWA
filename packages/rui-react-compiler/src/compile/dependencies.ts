@@ -4,7 +4,7 @@ export type Dependency = {
   defaultImport?: string;
 };
 
-const stringToDependency = (depNotation: string): Dependency => {
+export const stringToDependency = (depNotation: string): Dependency => {
   const [module, propertyName, name] = depNotation.split(":");
   if (propertyName === "default") {
     return {
@@ -16,7 +16,7 @@ const stringToDependency = (depNotation: string): Dependency => {
   if (name === undefined || name === propertyName) {
     return {
       module,
-      namedImports: [{ name }],
+      namedImports: [{ name: propertyName }],
     };
   }
   return {
@@ -30,7 +30,7 @@ const makeNamedImports = (
 ): string =>
   `{ ${imports.map((item) => (item.propertyName !== undefined ? `${item.propertyName} as ${item.name}` : item.name)).join(", ")} }`;
 
-const dependencyToString = (dep: Dependency): string => {
+export const dependencyToCode = (dep: Dependency): string => {
   const hasDefaultImport = dep.defaultImport !== undefined;
   const hasNamedImports = dep.namedImports.length > 0;
 
@@ -62,5 +62,5 @@ export const buildDependencies = (dependencies: string[]) =>
       return result.concat(item);
     }, [])
     .sort((a, b) => a.module.localeCompare(b.module))
-    .map((dep) => dependencyToString(dep))
+    .map((dep) => dependencyToCode(dep))
     .join("\n");

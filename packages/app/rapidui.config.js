@@ -98,7 +98,7 @@ module.exports = {
         stateModel: { type: "editor" },
         value: { type: "editor" },
       },
-      produces: (config) => `{ value: ${config.properties.stateModel.value} }`,
+      produces: (config) => `{ value: ${config.properties.stateModel}; }`,
       hidden: true,
       transform: (config) =>
         `const ${config.id} = ${config.dependencies[0]}<${config.properties.stateModel}>(${config.properties.value});`,

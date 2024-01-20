@@ -1,18 +1,11 @@
 import { emptyLogicMap } from "./logic";
 import { buildProps } from "./properties";
 
-export const buildDataComponent = (
+export const buildDataComponentModel = (
   { props = {}, id, component, events = {} },
-  configuration,
+  componentDefinition,
   logicBlocks,
 ) => {
-  const componentDefinition = configuration.components.find(
-    (c) => c.name === component,
-  );
-  if (!componentDefinition) {
-    throw new Error(`Component definition for ${component} not found`);
-  }
-
   const dependencies = componentDefinition.dependencies.map(
     (d) => `${d}:${component}`,
   );
@@ -24,18 +17,39 @@ export const buildDataComponent = (
     ? buildProps(events, logicBlocks)
     : emptyLogicMap();
 
-  const code = componentDefinition.transform({
-    id,
-    properties: evaluatedProps.map,
-    events: evaluatedEvents.map,
-    dependencies: dependencies.map((d) => d.split(":")[2]),
-  });
-
   const fullDependencies = dependencies.concat(
     ...evaluatedProps.dependencies,
     ...evaluatedEvents.dependencies,
   );
+  return [
+    {
+      id,
+      properties: evaluatedProps.map,
+      events: evaluatedEvents.map,
+      dependencies: dependencies.map((d) => d.split(":")[2]),
+    },
+    fullDependencies,
+  ];
+};
 
+export const buildDataComponent = (
+  { props = {}, id, component, events = {} },
+  configuration,
+  logicBlocks,
+) => {
+  const componentDefinition = configuration.components.find(
+    (c) => c.name === component,
+  );
+  if (!componentDefinition) {
+    throw new Error(`Component definition for ${component} not found`);
+  }
+  const [model, fullDependencies] = buildDataComponentModel(
+    { props, id, component, events },
+    componentDefinition,
+    logicBlocks,
+  );
+
+  const code = componentDefinition.transform(model);
   return {
     id,
     name: component,
