@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@parcel/plugin": "2.11.0",
-    "@rui/react-compiler": "*",
+    "@rui/react-compiler": "workspace:^",
     "prettier": "^3.2.2",
     "typescript": "~5.3.3"
   },

@@ -1237,6 +1237,7 @@ __metadata:
   resolution: "@rui/parcel-transformer-rui-react@workspace:packages/parcel-transformer-rui-react"
   dependencies:
     "@parcel/plugin": "npm:2.11.0"
+    "@rui/react-compiler": "workspace:^"
     "@types/node": "npm:^20.11.4"
     parcel: "npm:2.11.0"
     prettier: "npm:^3.2.2"
@@ -1244,7 +1245,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rui/react-compiler@workspace:packages/rui-react-compiler":
+"@rui/prime-react@workspace:packages/rui-prime-react":
+  version: 0.0.0-use.local
+  resolution: "@rui/prime-react@workspace:packages/rui-prime-react"
+  dependencies:
+    "@rui/react-compiler": "workspace:^"
+    parcel: "npm:^2.11.0"
+  languageName: unknown
+  linkType: soft
+
+"@rui/react-compiler@workspace:^, @rui/react-compiler@workspace:packages/rui-react-compiler":
   version: 0.0.0-use.local
   resolution: "@rui/react-compiler@workspace:packages/rui-react-compiler"
   dependencies:
@@ -4360,6 +4370,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "studio@workspace:packages/app"
   dependencies:
+    "@rui/react-compiler": "workspace:^"
     parcel: "npm:^2.11.0"
     postcss: "npm:^8.4.33"
     primereact: "npm:^10.3.1"

@@ -26,7 +26,7 @@ export const compiler = async (interfaceFile, configuration, logicCodePath) => {
     buildDataComponent(component, configuration, logicBlocks),
   );
 
-  console.log("generating logic file...");
+  console.log("generating logic file...\n");
   const logicFile = await generateLogicFile(interfaceFile, configuration);
   console.log(logicFile);
 
@@ -46,7 +46,8 @@ export const compiler = async (interfaceFile, configuration, logicCodePath) => {
     `,
     { parser: "typescript" },
   );
-  // console.log(code);
+  console.log("\ngenerating user interface...\n");
+  console.log(code);
 
   return code;
 };
