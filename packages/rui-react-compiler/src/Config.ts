@@ -70,12 +70,19 @@ export type ComponentDefinition = {
   dependencies: string[];
   properties?: Record<string, PropertyType>;
   events?: Record<string, FunctionSignature>;
-  childContainers?: string[];
-  allowChildren?: boolean;
-  produces?: (model: ComponentModel) => string;
-  hidden?: boolean;
-  transform?: (model: ComponentModel, helpers: RenderHelpers) => string;
-};
+} & (
+  | {
+      childContainers?: (string | { name: string; childTypeFilter?: string })[];
+      allowChildren?: boolean | { childTypeFilter: string };
+      hidden?: false;
+      transform?: (model: ComponentModel, helpers: RenderHelpers) => string;
+    }
+  | {
+      produces?: (model: ComponentModel) => string;
+      hidden: true;
+      transform: (model: ComponentModel) => string;
+    }
+);
 
 export type Config = {
   components: ComponentDefinition[];

@@ -1,3 +1,4 @@
+import { Config } from "../Config";
 import { emptyLogicMap } from "./logic";
 import { buildProps } from "./properties";
 
@@ -22,7 +23,7 @@ const defaultTransform = ({
 
 export const buildVisualComponent = (
   { component, props, events, id, ...rest },
-  configuration,
+  configuration: Config,
   logicBlocks,
 ) => {
   const evaluatedProps = props
@@ -35,13 +36,22 @@ export const buildVisualComponent = (
   const componentDefinition = configuration.components.find(
     (c) => c.name === component,
   );
+  if (!componentDefinition) {
+    throw new Error(`Component definition for ${component} not found`);
+  }
+  if (componentDefinition.hidden === true) {
+    throw new Error(
+      `Component ${component} is a data component. A visual component was expected.`,
+    );
+  }
 
   const childDependencies: string[] = [];
   const childContainers = {};
 
   const containerNames =
-    componentDefinition.childContainers ??
-    (componentDefinition.allowChildren ? ["children"] : []);
+    componentDefinition.childContainers?.map((c) =>
+      typeof c === "string" ? c : c.name,
+    ) ?? (componentDefinition.allowChildren ? ["children"] : []);
 
   containerNames.forEach((c) => {
     const childCodes = (rest[c] ?? []).map((child) => {

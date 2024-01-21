@@ -42,6 +42,10 @@ const components: Config = {
         "primereact/splitter:SplitterPanel:SplitterPanel",
       ],
       properties: {
+        layout: {
+          type: "string",
+          editorType: { type: "enum", options: ["horizontal", "vertical"] },
+        },
         firstMinSize: {
           type: "number",
           editorType: { type: "number", min: 0, max: 100 },
@@ -56,7 +60,7 @@ const components: Config = {
         { dependencies, properties },
         { toChildrenString, pickAndRemap, flattenProps },
       ) => {
-        return `<${dependencies[0]}>
+        return `<${dependencies[0]} ${flattenProps(pickAndRemap(properties, { layout: "layout" }))}>
           <${dependencies[1]} ${flattenProps(pickAndRemap(properties, { firstMinSize: "minSize" }))}>
               ${toChildrenString("first")}
           </${dependencies[1]}>

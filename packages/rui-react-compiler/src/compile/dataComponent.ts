@@ -1,3 +1,4 @@
+import { Config } from "../Config";
 import { emptyLogicMap } from "./logic";
 import { buildProps } from "./properties";
 
@@ -34,7 +35,7 @@ export const buildDataComponentModel = (
 
 export const buildDataComponent = (
   { props = {}, id, component, events = {} },
-  configuration,
+  configuration: Config,
   logicBlocks,
 ) => {
   const componentDefinition = configuration.components.find(
@@ -42,6 +43,11 @@ export const buildDataComponent = (
   );
   if (!componentDefinition) {
     throw new Error(`Component definition for ${component} not found`);
+  }
+  if (componentDefinition.hidden !== true) {
+    throw new Error(
+      `Component ${component} is a visual component. A data component was expected.`,
+    );
   }
   const [model, fullDependencies] = buildDataComponentModel(
     { props, id, component, events },
