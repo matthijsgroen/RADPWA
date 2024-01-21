@@ -42,8 +42,14 @@ const components: Config = {
         "primereact/splitter:SplitterPanel:SplitterPanel",
       ],
       properties: {
-        firstMinSize: { type: "number", min: 0, max: 100 },
-        secondMinSize: { type: "number", min: 0, max: 100 },
+        firstMinSize: {
+          type: "number",
+          editorType: { type: "number", min: 0, max: 100 },
+        },
+        secondMinSize: {
+          type: "number",
+          editorType: { type: "number", min: 0, max: 100 },
+        },
       },
       childContainers: ["first", "second"],
       transform: (
@@ -68,7 +74,11 @@ const components: Config = {
         label: { type: "string" },
       },
       events: {
-        onClick: { returnType: "void", parameters: ["React.MouseEvent"] },
+        onClick: {
+          type: "functionReference",
+          returnType: "void",
+          parameters: [["event", "React.MouseEvent"]],
+        },
       },
     },
     {
@@ -94,6 +104,7 @@ const components: Config = {
         onCreateTreeData: {
           type: "functionReference",
           returnType: "Promise<TreeNode[]>",
+          parameters: [],
         },
       },
       produces: () => "TreeNode[]",

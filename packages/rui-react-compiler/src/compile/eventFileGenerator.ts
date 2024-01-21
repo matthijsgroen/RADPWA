@@ -6,33 +6,13 @@ import {
   dependencyToCode,
   stringToDependency,
 } from "./dependencies";
-import { collectDependencies, selectAll } from "./ts-select";
+import { selectAll } from "./ts-select";
 import { buildDataComponentModel } from "./dataComponent";
 
 const f = ts.factory;
 
-const createScopeItem = (item: {
-  name: string;
-  type: string;
-  dependencies: string[];
-}): [ts.PropertySignature, string[]] => {
-  const tempScript = [
-    ...item.dependencies.map((s) => dependencyToCode(stringToDependency(s))),
-    `type Temp = ${item.type};`,
-  ];
-
-  const file = ts.createSourceFile(
-    "f.ts",
-    tempScript.join("\n"),
-    ts.ScriptTarget.Latest,
-  );
-
-  const typeDeclaration = selectAll<ts.TypeAliasDeclaration>([file], [
-    ts.SyntaxKind.TypeAliasDeclaration,
-  ] as const)[0].type;
-
-  const deps = item.dependencies.map((d) => stringToDependency(d));
-
+const extractUsedDependencies = (code: ts.Node, dependencies: string[]) => {
+  const deps = dependencies.map((d) => stringToDependency(d));
   const usedDependencies: string[] = [];
 
   const visit = (node: ts.Node) =>
@@ -46,7 +26,7 @@ const createScopeItem = (item: {
               d.namedImports.find((i) => i.name === child.escapedText),
           );
           if (depIndex !== -1) {
-            usedDependencies.push(item.dependencies[depIndex]);
+            usedDependencies.push(dependencies[depIndex]);
           }
         }
         visit(child);
@@ -56,8 +36,46 @@ const createScopeItem = (item: {
       },
     );
 
-  visit(typeDeclaration);
+  visit(code);
+  return usedDependencies;
+};
 
+const extractTypeDeclaration = (
+  type: string,
+  dependencies: string[],
+): [ts.TypeNode, string[]] => {
+  const tempScript = [
+    ...dependencies.map((s) => dependencyToCode(stringToDependency(s))),
+    `type Temp = ${type};`,
+  ];
+
+  const file = ts.createSourceFile(
+    "f.ts",
+    tempScript.join("\n"),
+    ts.ScriptTarget.Latest,
+  );
+
+  const typeDeclaration = selectAll<ts.TypeAliasDeclaration>([file], [
+    ts.SyntaxKind.TypeAliasDeclaration,
+  ] as const)[0].type;
+
+  const usedDependencies = extractUsedDependencies(
+    typeDeclaration,
+    dependencies,
+  );
+
+  return [typeDeclaration, usedDependencies];
+};
+
+const createScopeItem = (item: {
+  name: string;
+  type: string;
+  dependencies: string[];
+}): [ts.PropertySignature, string[]] => {
+  const [typeDeclaration, usedDependencies] = extractTypeDeclaration(
+    item.type,
+    item.dependencies,
+  );
   const signature = f.createPropertySignature(
     [f.createToken(ts.SyntaxKind.ReadonlyKeyword)],
     f.createIdentifier(item.name),
@@ -114,10 +132,105 @@ export const createScopeType = (
   return [scope, imports];
 };
 
+const collectHandlers = (interfaceFile, configuration) => {
+  const handlers: {
+    name: string;
+    returnType: string;
+    parameters: [name: string, type: string][];
+    dependencies: string[];
+  }[] = [];
+
+  const extractHandlersFromComponent = (component) => {
+    const componentDefinition = configuration.components.find(
+      (c) => c.name === component.component,
+    );
+    if (!componentDefinition) {
+      throw new Error(`Component definition for ${component} not found`);
+    }
+    (
+      Object.entries(component?.events ?? {}) as [string, { value: string }][]
+    ).forEach(([eventName, eventDetails]) => {
+      const signature = componentDefinition.events[eventName];
+
+      handlers.push({
+        name: eventDetails.value,
+        returnType: signature.returnType,
+        parameters: signature.parameters,
+        dependencies: componentDefinition.dependencies,
+      });
+    });
+
+    const containerNames =
+      componentDefinition.childContainers ??
+      (componentDefinition.allowChildren ? ["children"] : []);
+
+    containerNames.forEach((c) => {
+      (component[c] ?? []).forEach((child) => {
+        if (typeof child === "string") {
+          return child;
+        }
+        extractHandlersFromComponent(child);
+      });
+    });
+  };
+
+  interfaceFile.components.forEach((component) => {
+    extractHandlersFromComponent(component);
+  });
+
+  interfaceFile.children.forEach((component) => {
+    extractHandlersFromComponent(component);
+  });
+
+  return handlers;
+};
+
 export const generateHandlerFunctions = (
   interfaceFile,
   configuration,
+): [ts.PropertyAssignment[], imports: string[]] => {
+  const requiredHandlers = collectHandlers(interfaceFile, configuration);
+
+  const codeFragments = requiredHandlers.map(
+    (handler) => `${buildDependencies(handler.dependencies)}
+      const ${handler.name} = (${handler.parameters.map(([n, t]) => `${n}: ${t}`).join(", ")}): ${handler.returnType} => {}
+    `,
+  );
+
+  const dependencies: string[] = [];
+
+  const handlerFunctions = codeFragments.map((code, idx) => {
+    const file = ts.createSourceFile("f.ts", code, ts.ScriptTarget.Latest);
+    const deps = requiredHandlers[idx].dependencies;
+
+    const functionDeclaration = selectAll<ts.ArrowFunction>([file], [
+      ts.SyntaxKind.VariableStatement,
+      ts.SyntaxKind.VariableDeclarationList,
+      ts.SyntaxKind.VariableDeclaration,
+      ts.SyntaxKind.ArrowFunction,
+    ] as const)[0];
+
+    const usedDependencies = extractUsedDependencies(functionDeclaration, deps);
+    dependencies.push(...usedDependencies);
+
+    return f.createPropertyAssignment(
+      requiredHandlers[idx].name,
+      functionDeclaration,
+    );
+  });
+
+  return [handlerFunctions, dependencies];
+};
+
+export const generateScopedHandlers = (
+  interfaceFile,
+  configuration,
 ): [ts.ExportAssignment, imports: string[]] => {
+  const [properties, dependencies] = generateHandlerFunctions(
+    interfaceFile,
+    configuration,
+  );
+
   const scopedFunctions = f.createExportAssignment(
     undefined,
     undefined,
@@ -136,16 +249,18 @@ export const generateHandlerFunctions = (
       ],
       undefined,
       f.createToken(ts.SyntaxKind.EqualsGreaterThanToken),
-      f.createParenthesizedExpression(f.createObjectLiteralExpression([])),
+      f.createParenthesizedExpression(
+        f.createObjectLiteralExpression(properties),
+      ),
     ),
   );
 
-  return [scopedFunctions, []];
+  return [scopedFunctions, dependencies];
 };
 
 export const generateLogicFile = async (interfaceFile, configuration) => {
   const [scope, scopeImports] = createScopeType(interfaceFile, configuration);
-  const [functions, funcImports] = generateHandlerFunctions(
+  const [functions, funcImports] = generateScopedHandlers(
     interfaceFile,
     configuration,
   );
@@ -169,7 +284,9 @@ export const generateLogicFile = async (interfaceFile, configuration) => {
   const completeCode = await prettier.format(
     `
   ${importCode}
+
   ${scopeCode}
+
   ${functionCode}
   `,
     { parser: "typescript" },

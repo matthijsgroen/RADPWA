@@ -5,6 +5,7 @@ import { buildVisualComponent } from "./compile/visualComponent";
 import { buildDependencies } from "./compile/dependencies";
 import { LogicBlocks, buildHandlers } from "./compile/logic";
 import { generateLogicFile } from "./compile/eventFileGenerator";
+import { writeFile } from "fs/promises";
 export type { Config } from "./Config";
 
 export const compiler = async (interfaceFile, configuration, logicCodePath) => {
@@ -26,9 +27,11 @@ export const compiler = async (interfaceFile, configuration, logicCodePath) => {
     buildDataComponent(component, configuration, logicBlocks),
   );
 
-  console.log("generating logic file...\n");
-  const logicFile = await generateLogicFile(interfaceFile, configuration);
-  console.log(logicFile);
+  if (!sourceFile) {
+    console.log("generating logic file...\n");
+    const logicFile = await generateLogicFile(interfaceFile, configuration);
+    await writeFile(logicCodePath, logicFile, { encoding: "utf8" });
+  }
 
   const dependencies = children
     .flatMap((child) => child.dependencies)
@@ -46,8 +49,8 @@ export const compiler = async (interfaceFile, configuration, logicCodePath) => {
     `,
     { parser: "typescript" },
   );
-  console.log("\ngenerating user interface...\n");
-  console.log(code);
+  // console.log("\ngenerating user interface...\n");
+  // console.log(code);
 
   return code;
 };
