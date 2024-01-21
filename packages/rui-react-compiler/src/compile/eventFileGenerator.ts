@@ -6,39 +6,11 @@ import {
   dependencyToCode,
   stringToDependency,
 } from "./dependencies";
-import { selectAll } from "./ts-select";
+import { selectAll } from "./typescript/selectAll";
 import { buildDataComponentModel } from "./dataComponent";
+import { extractUsedDependencies } from "./typescript/extractUsedDependencies";
 
 const f = ts.factory;
-
-const extractUsedDependencies = (code: ts.Node, dependencies: string[]) => {
-  const deps = dependencies.map((d) => stringToDependency(d));
-  const usedDependencies: string[] = [];
-
-  const visit = (node: ts.Node) =>
-    ts.forEachChild(
-      node,
-      (child) => {
-        if (ts.isIdentifier(child)) {
-          const depIndex = deps.findIndex(
-            (d) =>
-              d.defaultImport === child.escapedText ||
-              d.namedImports.find((i) => i.name === child.escapedText),
-          );
-          if (depIndex !== -1) {
-            usedDependencies.push(dependencies[depIndex]);
-          }
-        }
-        visit(child);
-      },
-      (nodes) => {
-        nodes.forEach((node) => visit(node));
-      },
-    );
-
-  visit(code);
-  return usedDependencies;
-};
 
 const extractTypeDeclaration = (
   type: string,

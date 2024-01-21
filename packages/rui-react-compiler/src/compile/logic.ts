@@ -1,5 +1,5 @@
 import ts from "typescript";
-import { collectDependencies, selectAll } from "./ts-select";
+import { collectDependencies, selectAll } from "./typescript/selectAll";
 
 const s = ts.SyntaxKind;
 const exportSelector = [s.ExportAssignment, s.ArrowFunction] as const;
