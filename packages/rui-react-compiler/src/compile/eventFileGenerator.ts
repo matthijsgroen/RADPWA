@@ -311,6 +311,9 @@ export const synchronizeLogicFile = async (
   let madeChanges = false;
 
   const scopeTypeName = getScopeTypeName(sourceFile);
+  console.log("scope name: ", scopeTypeName);
+
+  let foundScope = false;
 
   const transformerFactory: ts.TransformerFactory<ts.Node> = (
     context: ts.TransformationContext,
@@ -360,12 +363,41 @@ export const synchronizeLogicFile = async (
             return f.createNamedImports([...node.elements, ...missingNamed]);
           }
         }
+
+        if (
+          ts.isTypeAliasDeclaration(node) &&
+          node.name.text === scopeTypeName
+        ) {
+          foundScope = true;
+
+          if (ts.isTypeLiteralNode(node.type)) {
+            // Sync up type properties
+          } else {
+            return f.createTypeAliasDeclaration(
+              undefined,
+              f.createIdentifier(scopeTypeName),
+              undefined,
+              scope.type,
+            );
+          }
+        }
+
         if (ts.isSourceFile(node)) {
           if (dependencies.length > 0) {
             madeChanges = true;
 
             const newStatements = [
               ...dependenciesToTS(dependencies),
+              ...(foundScope
+                ? []
+                : [
+                    f.createTypeAliasDeclaration(
+                      undefined,
+                      f.createIdentifier(scopeTypeName),
+                      undefined,
+                      scope.type,
+                    ),
+                  ]),
               ...node.statements,
             ];
 
@@ -389,14 +421,18 @@ export const synchronizeLogicFile = async (
   // const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
 
   const transformationResult = ts.transform(sourceFile, [transformerFactory]);
-  const printer = ts.createPrinter();
 
-  const code = printer.printNode(
-    ts.EmitHint.SourceFile,
-    transformationResult.transformed[0],
-    sourceFile,
-  );
-  console.log(madeChanges, code);
+  if (madeChanges) {
+    const printer = ts.createPrinter();
+
+    const code = printer.printNode(
+      ts.EmitHint.SourceFile,
+      transformationResult.transformed[0],
+      sourceFile,
+    );
+    console.log(madeChanges, code);
+    return [madeChanges, code];
+  }
 
   return [madeChanges, ""];
 };
