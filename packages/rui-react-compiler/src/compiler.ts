@@ -4,11 +4,19 @@ import { buildDataComponent } from "./compile/dataComponent";
 import { buildVisualComponent } from "./compile/visualComponent";
 import { buildDependencies } from "./compile/dependencies";
 import { LogicBlocks, buildHandlers } from "./compile/logic";
-import { generateLogicFile } from "./compile/eventFileGenerator";
+import {
+  generateLogicFile,
+  synchronizeLogicFile,
+} from "./compile/eventFileGenerator";
 import { writeFile } from "fs/promises";
+import { Config } from "./Config";
 export type { Config } from "./Config";
 
-export const compiler = async (interfaceFile, configuration, logicCodePath) => {
+export const compiler = async (
+  interfaceFile,
+  configuration: Config,
+  logicCodePath: string,
+) => {
   const mainId = interfaceFile["id"];
 
   let logicBlocks: LogicBlocks = {};
@@ -31,6 +39,17 @@ export const compiler = async (interfaceFile, configuration, logicCodePath) => {
     console.log("generating logic file...\n");
     const logicFile = await generateLogicFile(interfaceFile, configuration);
     await writeFile(logicCodePath, logicFile, { encoding: "utf8" });
+  } else {
+    console.log("synchronizing logic file...\n");
+
+    const [hasChanges, logicFile] = await synchronizeLogicFile(
+      sourceFile,
+      interfaceFile,
+      configuration,
+    );
+    // if (hasChanges){
+    // await writeFile(logicCodePath, logicFile, { encoding: "utf8" });
+    // }
   }
 
   const dependencies = children
@@ -50,7 +69,7 @@ export const compiler = async (interfaceFile, configuration, logicCodePath) => {
     { parser: "typescript" },
   );
   console.log("\ngenerating user interface...\n");
-  console.log(code);
+  // console.log(code);
 
   return code;
 };

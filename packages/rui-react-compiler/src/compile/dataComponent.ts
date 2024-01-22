@@ -1,12 +1,12 @@
-import { Config } from "../Config";
+import { ComponentDefinition, ComponentModel, Config } from "../Config";
 import { emptyLogicMap } from "./logic";
 import { buildProps } from "./properties";
 
 export const buildDataComponentModel = (
   { props = {}, id, component, events = {} },
-  componentDefinition,
+  componentDefinition: ComponentDefinition,
   logicBlocks,
-) => {
+): [ComponentModel, string[]] => {
   const dependencies = componentDefinition.dependencies.map(
     (d) => `${d}:${component}`,
   );
