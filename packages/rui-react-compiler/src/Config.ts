@@ -46,7 +46,7 @@ export type FunctionSignature = {
   parameters: [name: string, type: string][];
 };
 
-type ComponentModel = {
+export type ComponentModel = {
   id: string;
   dependencies: string[];
   properties: Record<string, string>;
@@ -63,26 +63,29 @@ type RenderHelpers = {
   flattenProps: (properties: Record<string, string>) => string;
 };
 
-export type ComponentDefinition = {
+export type ComponentDefinition = DataComponent | VisualComponent;
+
+export type ComponentBase = {
   name: string;
   componentName?: string;
   category: string;
   dependencies: string[];
   properties?: Record<string, PropertyType>;
   events?: Record<string, FunctionSignature>;
-} & (
-  | {
-      childContainers?: (string | { name: string; childTypeFilter?: string })[];
-      allowChildren?: boolean | { childTypeFilter: string };
-      hidden?: false;
-      transform?: (model: ComponentModel, helpers: RenderHelpers) => string;
-    }
-  | {
-      produces?: (model: ComponentModel) => string;
-      hidden: true;
-      transform: (model: ComponentModel) => string;
-    }
-);
+};
+
+export type DataComponent = ComponentBase & {
+  produces?: (model: ComponentModel) => string;
+  hidden: true;
+  transform: (model: ComponentModel) => string;
+};
+
+export type VisualComponent = ComponentBase & {
+  childContainers?: (string | { name: string; childTypeFilter?: string })[];
+  allowChildren?: boolean | { childTypeFilter: string };
+  hidden?: false;
+  transform?: (model: ComponentModel, helpers: RenderHelpers) => string;
+};
 
 export type Config = {
   components: ComponentDefinition[];
