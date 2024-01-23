@@ -20,7 +20,10 @@ export const compiler = async (
   const mainId = interfaceFile["id"];
 
   let logicBlocks: LogicBlocks = {};
-  const program = ts.createProgram([logicCodePath], { allowJs: true });
+  const program = ts.createProgram([logicCodePath], {
+    allowJs: true,
+    removeComments: false,
+  });
   const sourceFile = program.getSourceFile(logicCodePath);
 
   if (sourceFile) {
@@ -47,9 +50,9 @@ export const compiler = async (
       interfaceFile,
       configuration,
     );
-    // if (hasChanges){
-    // await writeFile(logicCodePath, logicFile, { encoding: "utf8" });
-    // }
+    if (hasChanges) {
+      await writeFile(logicCodePath, logicFile, { encoding: "utf8" });
+    }
   }
 
   const dependencies = children

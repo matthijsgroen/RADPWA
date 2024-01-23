@@ -1,4 +1,11 @@
-import ts from "typescript";
+import ts, {
+  Identifier,
+  NodeArray,
+  PropertyAssignment,
+  PropertySignature,
+  SyntaxKind,
+  TypeLiteralNode,
+} from "typescript";
 import prettier from "prettier";
 import {
   Dependency,
@@ -13,6 +20,7 @@ import { selectAll } from "./typescript/selectAll";
 import { buildDataComponentModel } from "./dataComponent";
 import { extractUsedDependencies } from "./typescript/extractUsedDependencies";
 import { Config } from "../Config";
+import { transferComments } from "./typescript/comments";
 
 const f = ts.factory;
 
@@ -198,15 +206,10 @@ export const generateHandlerFunctions = (
   return [handlerFunctions, dependencies];
 };
 
-export const generateScopedHandlers = (
-  interfaceFile,
-  configuration,
-): [ts.ExportAssignment, imports: string[]] => {
-  const [properties, dependencies] = generateHandlerFunctions(
-    interfaceFile,
-    configuration,
-  );
-
+export const wrapScopedHandlers = (
+  scopeTypeName: string,
+  properties: ts.PropertyAssignment[],
+): ts.ExportAssignment => {
   const scopedFunctions = f.createExportAssignment(
     undefined,
     undefined,
@@ -219,7 +222,10 @@ export const generateScopedHandlers = (
           undefined,
           f.createIdentifier("scope"),
           undefined,
-          f.createTypeReferenceNode(f.createIdentifier("Scope"), undefined),
+          f.createTypeReferenceNode(
+            f.createIdentifier(scopeTypeName),
+            undefined,
+          ),
           undefined,
         ),
       ],
@@ -230,6 +236,19 @@ export const generateScopedHandlers = (
       ),
     ),
   );
+
+  return scopedFunctions;
+};
+
+export const generateScopedHandlers = (
+  interfaceFile,
+  configuration: Config,
+): [ts.ExportAssignment, imports: string[]] => {
+  const [properties, dependencies] = generateHandlerFunctions(
+    interfaceFile,
+    configuration,
+  );
+  const scopedFunctions = wrapScopedHandlers("Scope", properties);
 
   return [scopedFunctions, dependencies];
 };
@@ -281,6 +300,7 @@ const getScopeTypeName = (sourceFile: ts.SourceFile): string => {
   if (
     defaultExport &&
     ts.isExportAssignment(defaultExport) &&
+    defaultExport.expression &&
     ts.isArrowFunction(defaultExport.expression)
   ) {
     const scopeArg = defaultExport.expression.parameters.at(0);
@@ -291,11 +311,151 @@ const getScopeTypeName = (sourceFile: ts.SourceFile): string => {
   return "Scope";
 };
 
+const stringifyPropertyMember = (
+  property: ts.PropertySignature,
+  sourceFile: ts.SourceFile,
+  printer: ts.Printer,
+): string =>
+  printer.printNode(
+    ts.EmitHint.Unspecified,
+    f.createTypeAliasDeclaration(
+      undefined,
+      "test",
+      undefined,
+      property.type as ts.TypeNode,
+    ),
+    sourceFile,
+  );
+
+const stringifyArrowFunction = (
+  arrow: ts.ArrowFunction,
+  sourceFile: ts.SourceFile,
+  printer: ts.Printer,
+): string =>
+  printer.printNode(
+    ts.EmitHint.Unspecified,
+    f.createVariableDeclaration(
+      "test",
+      undefined,
+      undefined,
+      f.createArrowFunction(
+        undefined,
+        undefined,
+        arrow.parameters,
+        arrow.type,
+        f.createToken(ts.SyntaxKind.EqualsGreaterThanToken),
+        f.createBlock([]),
+      ),
+    ),
+    sourceFile,
+  );
+
+const isSignatureEqual = <T extends PropertyAssignment | PropertySignature>(
+  source: T,
+  target: T,
+  sourceFile: ts.SourceFile,
+  printer: ts.Printer,
+) => {
+  if (ts.isPropertySignature(source) && ts.isPropertySignature(target)) {
+    const actualType = stringifyPropertyMember(source, sourceFile, printer);
+    const expectedType = stringifyPropertyMember(target, sourceFile, printer);
+    return actualType === expectedType;
+  }
+
+  if (
+    ts.isPropertyAssignment(source) &&
+    ts.isPropertyAssignment(target) &&
+    ts.isArrowFunction(source.initializer) &&
+    ts.isArrowFunction(target.initializer)
+  ) {
+    const actualType = stringifyArrowFunction(
+      source.initializer,
+      sourceFile,
+      printer,
+    );
+    const expectedType = stringifyArrowFunction(
+      target.initializer,
+      sourceFile,
+      printer,
+    );
+    return actualType === expectedType;
+  }
+
+  return false;
+};
+
+const synchronizeProperties = <
+  K extends ts.PropertyAssignment | ts.PropertySignature,
+  T extends NodeArray<K>,
+>(
+  source: T,
+  target: T,
+  addComments: <N extends ts.Node>(node: N) => N,
+  sourceFile: ts.SourceFile,
+  printer: ts.Printer,
+  keepOutdated = false,
+): [updated: boolean, result: T] => {
+  let updatedScopeType = false;
+  let missingMembers = target.map((e) => {
+    if (ts.isIdentifier(e.name)) {
+      return e.name.text;
+    }
+  });
+
+  const updatedMembers: K[] = [];
+  source.forEach((member) => {
+    if (ts.isIdentifier(member.name)) {
+      const name = member.name.text;
+      const expectedMember = target.find(
+        (m) => ts.isIdentifier(m.name) && m.name.text === name,
+      );
+      if (!expectedMember) {
+        if (keepOutdated) {
+          // member is not required anymore, but we keep it
+          updatedMembers.push(addComments(member));
+        }
+
+        updatedScopeType = true;
+        return;
+      }
+      const equalSignature =
+        keepOutdated ||
+        isSignatureEqual(member, expectedMember, sourceFile, printer);
+
+      if (equalSignature) {
+        // we keep original code.. are comments included?
+        updatedMembers.push(addComments(member));
+
+        missingMembers = missingMembers.filter((n) => n !== name);
+      } else {
+        updatedScopeType = true;
+      }
+      // verify type
+    } else {
+      updatedScopeType = true;
+    }
+  });
+
+  return [
+    updatedScopeType || missingMembers.length > 0,
+    f.createNodeArray([
+      ...updatedMembers,
+      ...missingMembers.map<K>(
+        (f) =>
+          target.find(
+            (expected) => (expected.name as Identifier).text === f,
+          ) as K,
+      ),
+    ]) as T,
+  ];
+};
+
 export const synchronizeLogicFile = async (
   sourceFile: ts.SourceFile,
   interfaceFile,
   configuration: Config,
 ): Promise<[hasChanges: boolean, newCode: string]> => {
+  // Create all sources to synchronize
   const [scope, scopeImports] = createScopeType(interfaceFile, configuration);
   const [properties, funcImports] = generateHandlerFunctions(
     interfaceFile,
@@ -308,20 +468,39 @@ export const synchronizeLogicFile = async (
       .map((statement) => stringToDependency(statement)),
   );
 
+  const printer = ts.createPrinter({ removeComments: false });
+
+  const commentAdministration: { comments: ts.CommentRange[] } = {
+    comments: [],
+  };
+  const addComments = <T extends ts.Node>(source: T, destination: T = source) =>
+    transferComments(source, destination, sourceFile, commentAdministration);
+
   let madeChanges = false;
 
   const scopeTypeName = getScopeTypeName(sourceFile);
-  console.log("scope name: ", scopeTypeName);
 
   let foundScope = false;
+  let foundExport = false;
 
-  const transformerFactory: ts.TransformerFactory<ts.Node> = (
-    context: ts.TransformationContext,
-  ) => {
-    return (rootNode) => {
+  const existingFunctionHandlers = selectAll<ts.ObjectLiteralExpression>(
+    [sourceFile],
+    [
+      ts.SyntaxKind.ExportAssignment,
+      ts.SyntaxKind.ArrowFunction,
+      ts.SyntaxKind.ParenthesizedExpression,
+      ts.SyntaxKind.ObjectLiteralExpression,
+    ],
+  )[0];
+
+  const transformerFactory: ts.TransformerFactory<ts.Node> =
+    (context: ts.TransformationContext) => (rootNode) => {
       function visit(node: ts.Node): ts.Node {
         node = ts.visitEachChild(node, visit, context);
 
+        /**
+         * Dependencies
+         */
         if (ts.isImportSpecifier(node)) {
           const specifier = node;
           const module = specifier.parent.parent.parent.moduleSpecifier
@@ -348,6 +527,9 @@ export const synchronizeLogicFile = async (
           }, []);
         }
 
+        /**
+         * Dependencies
+         */
         if (ts.isNamedImports(node)) {
           const namedCollection = node;
           const module = namedCollection.parent.parent.moduleSpecifier
@@ -364,6 +546,9 @@ export const synchronizeLogicFile = async (
           }
         }
 
+        /**
+         * Scope type object
+         */
         if (
           ts.isTypeAliasDeclaration(node) &&
           node.name.text === scopeTypeName
@@ -371,19 +556,82 @@ export const synchronizeLogicFile = async (
           foundScope = true;
 
           if (ts.isTypeLiteralNode(node.type)) {
-            // Sync up type properties
+            const existingMembers = node.type
+              .members as NodeArray<PropertySignature>;
+            const expectedMembers = (scope.type as TypeLiteralNode)
+              .members as NodeArray<PropertySignature>;
+
+            const [updatedMembers, newMembers] = synchronizeProperties(
+              existingMembers,
+              expectedMembers,
+              addComments,
+              sourceFile,
+              printer,
+            );
+
+            if (updatedMembers) {
+              return addComments(
+                node,
+                f.createTypeAliasDeclaration(
+                  undefined,
+                  scopeTypeName,
+                  undefined,
+                  f.createTypeLiteralNode(newMembers),
+                ),
+              );
+            }
           } else {
-            return f.createTypeAliasDeclaration(
-              undefined,
-              f.createIdentifier(scopeTypeName),
-              undefined,
-              scope.type,
+            return addComments(
+              node,
+              f.createTypeAliasDeclaration(
+                undefined,
+                f.createIdentifier(scopeTypeName),
+                undefined,
+                scope.type,
+              ),
             );
           }
         }
 
+        if (ts.isExportAssignment(node)) {
+          foundExport = true;
+        }
+
+        if (
+          ts.isObjectLiteralExpression(node) &&
+          existingFunctionHandlers &&
+          node.pos === existingFunctionHandlers.pos &&
+          node.end === existingFunctionHandlers.end
+        ) {
+          // function handlers ? first check if this object literal expression is the body of the exported arrow function
+          // Synchronize property assignments
+          const existingMembers =
+            node.properties as NodeArray<PropertyAssignment>;
+          const expectedMembers = f.createNodeArray(properties);
+
+          const [updatedMembers, newMembers] = synchronizeProperties(
+            existingMembers,
+            expectedMembers,
+            addComments,
+            sourceFile,
+            printer,
+            true, // Keep outdated
+          );
+
+          if (updatedMembers) {
+            madeChanges = true;
+            return addComments(
+              node,
+              f.createObjectLiteralExpression(newMembers),
+            );
+          }
+        }
+
+        /**
+         * Root for missing dependencies, injection missing scope
+         */
         if (ts.isSourceFile(node)) {
-          if (dependencies.length > 0) {
+          if (dependencies.length > 0 || !foundScope) {
             madeChanges = true;
 
             const newStatements = [
@@ -399,6 +647,9 @@ export const synchronizeLogicFile = async (
                     ),
                   ]),
               ...node.statements,
+              ...(foundExport
+                ? []
+                : [wrapScopedHandlers(scopeTypeName, properties)]),
             ];
 
             dependencies = [];
@@ -411,24 +662,24 @@ export const synchronizeLogicFile = async (
           }
         }
 
-        return node;
+        return addComments(node);
       }
 
       return ts.visitNode(rootNode, visit);
     };
-  };
 
-  // const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
-
-  const transformationResult = ts.transform(sourceFile, [transformerFactory]);
+  const transformationResult = ts.transform(sourceFile, [transformerFactory], {
+    removeComments: false,
+  });
 
   if (madeChanges) {
-    const printer = ts.createPrinter();
-
-    const code = printer.printNode(
-      ts.EmitHint.SourceFile,
-      transformationResult.transformed[0],
-      sourceFile,
+    const code = await prettier.format(
+      printer.printNode(
+        ts.EmitHint.SourceFile,
+        transformationResult.transformed[0],
+        sourceFile,
+      ),
+      { parser: "typescript" },
     );
     console.log(madeChanges, code);
     return [madeChanges, code];

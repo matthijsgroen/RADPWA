@@ -19,6 +19,9 @@ export const buildHandlers = (
     exportSelector,
   )[0];
 
+  if (!scopedHandlers) {
+    return result;
+  }
   const typeChecker = program.getTypeChecker();
   const definedScope = scopedHandlers.parameters[0];
 
