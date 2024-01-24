@@ -4,4 +4,6 @@ export type {
   ComponentDefinition,
   VisualComponentDefinition,
   ComponentLibrary,
-} from "./types";
+} from "./component-types";
+
+export { run } from "./cli";

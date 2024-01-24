@@ -1268,8 +1268,14 @@ __metadata:
 "@rui/transform@workspace:^, @rui/transform@workspace:packages/rui-transform":
   version: 0.0.0-use.local
   resolution: "@rui/transform@workspace:packages/rui-transform"
+  dependencies:
+    commander: "npm:^11.1.0"
+    parcel: "npm:^2.11.0"
+    typescript: "npm:^5.3.3"
   peerDependencies:
     react: ^18.2.0
+  bin:
+    rui-transform: ./bin/rui-transform.js
   languageName: unknown
   linkType: soft
 
@@ -1936,6 +1942,13 @@ __metadata:
   dependencies:
     delayed-stream: "npm:~1.0.0"
   checksum: 0dbb829577e1b1e839fa82b40c07ffaf7de8a09b935cadd355a73652ae70a88b4320db322f6634a4ad93424292fa80973ac6480986247f1734a1137debf271d5
+  languageName: node
+  linkType: hard
+
+"commander@npm:^11.1.0":
+  version: 11.1.0
+  resolution: "commander@npm:11.1.0"
+  checksum: 13cc6ac875e48780250f723fb81c1c1178d35c5decb1abb1b628b3177af08a8554e76b2c0f29de72d69eef7c864d12613272a71fabef8047922bc622ab75a179
   languageName: node
   linkType: hard
 
