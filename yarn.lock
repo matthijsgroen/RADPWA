@@ -1245,7 +1245,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rui/prime-react@workspace:packages/rui-prime-react":
+"@rui/prime-react@workspace:^, @rui/prime-react@workspace:packages/rui-prime-react":
   version: 0.0.0-use.local
   resolution: "@rui/prime-react@workspace:packages/rui-prime-react"
   dependencies:
@@ -1262,6 +1262,14 @@ __metadata:
     parcel: "npm:2.11.0"
     prettier: "npm:^3.2.2"
     typescript: "npm:~5.3.3"
+  languageName: unknown
+  linkType: soft
+
+"@rui/transform@workspace:^, @rui/transform@workspace:packages/rui-transform":
+  version: 0.0.0-use.local
+  resolution: "@rui/transform@workspace:packages/rui-transform"
+  peerDependencies:
+    react: ^18.2.0
   languageName: unknown
   linkType: soft
 
@@ -2564,6 +2572,13 @@ __metadata:
   dependencies:
     function-bind: "npm:^1.1.2"
   checksum: 5d415b114f410661208c95e7ab4879f1cc2765b8daceff4dc8718317d1cb7b9ffa7c5d1eafd9a4389c9aab7445d6ea88e05f3096cb1e529618b55304956b87fc
+  languageName: node
+  linkType: hard
+
+"highlight.js@npm:^11.9.0":
+  version: 11.9.0
+  resolution: "highlight.js@npm:11.9.0"
+  checksum: 27cfa8717dc9d200aecbdb383eb122d5f45ce715d2f468583785d36fbfe5076ce033abb02486dc13b407171721cda6f474ed3f3a5a8e8c3d91367fa5f51ee374
   languageName: node
   linkType: hard
 
@@ -4370,7 +4385,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "studio@workspace:packages/app"
   dependencies:
+    "@rui/prime-react": "workspace:^"
     "@rui/react-compiler": "workspace:^"
+    "@rui/transform": "workspace:^"
+    highlight.js: "npm:^11.9.0"
     parcel: "npm:^2.11.0"
     postcss: "npm:^8.4.33"
     primereact: "npm:^10.3.1"
