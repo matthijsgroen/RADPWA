@@ -1,6 +1,6 @@
 import React from "react";
 // import Screen from "./user-interface.rui";
-// import ManualScreen from "./ManualScreen";
+import ManualScreen from "./ManualScreen";
 
 import { MainScreen } from "./ExperimentScreen.rui";
 
@@ -11,8 +11,8 @@ import "primereact/resources/themes/lara-light-purple/theme.css";
 export const App = () => {
   return (
     <PrimeReactProvider>
-      <MainScreen />
-      {/* <ManualScreen /> */}
+      {/* <MainScreen /> */}
+      <ManualScreen />
     </PrimeReactProvider>
   );
 };
