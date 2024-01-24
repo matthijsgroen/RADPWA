@@ -1,8 +1,32 @@
 import ts, { ImportSpecifier, NodeFlags, SyntaxKind } from "typescript";
-import { Resolver, RuiJSONFormat } from "../compiler-types";
+import {
+  ComponentMetaInformation,
+  Resolver,
+  RuiDataComponent,
+  RuiJSONFormat,
+  RuiVisualComponent,
+} from "../compiler-types";
 import { getProjectComponents } from "../componentLibrary/getProjectComponents";
 
 const f = ts.factory;
+
+const getFlatComponentList = (
+  structure: RuiJSONFormat,
+): (RuiDataComponent | RuiVisualComponent)[] => {
+  const result: (RuiDataComponent | RuiVisualComponent)[] = [];
+  result.push(...structure.components);
+
+  const pushNestedVisualComponents = (nodes: RuiVisualComponent[]) => {
+    result.push(...nodes);
+    nodes.forEach((node) => {
+      Object.entries(node.childContainers || {}).forEach(([_k, v]) => {
+        pushNestedVisualComponents(v);
+      });
+    });
+  };
+  pushNestedVisualComponents(structure.composition);
+  return result;
+};
 
 const reactImport = () =>
   f.createImportDeclaration(
@@ -48,13 +72,26 @@ const defineComponentTypes = () =>
     f.createTypeQueryNode(f.createIdentifier("Components"), undefined),
   );
 
-// We need some VCL insight to continue here...
-export const defineScopeType = () =>
+export const defineScopeType = (
+  flatComponentList: (RuiDataComponent | RuiVisualComponent)[],
+  vcl: Record<string, ComponentMetaInformation>,
+) =>
   f.createTypeAliasDeclaration(
     [f.createToken(ts.SyntaxKind.ExportKeyword)],
     f.createIdentifier("Scope"),
     undefined,
-    f.createTypeLiteralNode([]),
+    f.createTypeLiteralNode(
+      flatComponentList
+        .filter((c) => c.component && vcl[c.component].production)
+        .map((c) =>
+          f.createPropertySignature(
+            [f.createToken(ts.SyntaxKind.ReadonlyKeyword)],
+            c.id,
+            undefined,
+            vcl[c.component].production?.type,
+          ),
+        ),
+    ),
   );
 
 const createComponentFunction = (name: string, statements: ts.Statement[]) =>
@@ -88,18 +125,20 @@ export const convertJsonToRui = async (
     resolve,
   );
 
-  console.log(
-    JSON.stringify(
-      componentLibraryInfo,
-      (key, value) => {
-        if (key === "type" && ts.isTypeNode(value)) {
-          return "(ts.TypeNode)";
-        }
-        return value;
-      },
-      2,
-    ),
-  );
+  const flatComponentList = getFlatComponentList(structure);
+
+  //   console.log(
+  //     JSON.stringify(
+  //       componentLibraryInfo,
+  //       (_key, value) => {
+  //         if (value && ts.isTypeNode(value)) {
+  //           return "(ts.TypeNode)";
+  //         }
+  //         return value;
+  //       },
+  //       2,
+  //     ),
+  //   );
 
   const sourceFile = f.createSourceFile(
     [
@@ -108,7 +147,7 @@ export const convertJsonToRui = async (
       componentsImport(structure.componentLibrary),
       eventHandlersImport(structure.eventHandlers),
       defineComponentTypes(),
-      defineScopeType(),
+      defineScopeType(flatComponentList, componentLibraryInfo),
       createComponentFunction(structure.id, []),
     ],
     f.createToken(SyntaxKind.EndOfFileToken),

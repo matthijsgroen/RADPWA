@@ -48,10 +48,16 @@ export type EventInfo = Record<
   }
 >;
 
+export type ProductionInfo = {
+  type: ts.TypeNode | undefined;
+  typeAsString: string;
+};
+
 export type ComponentMetaInformation = {
   componentName: string;
   dependencies: ComponentDependency[];
   isVisual: boolean;
   properties: PropertyInfo;
+  production?: ProductionInfo;
   events: EventInfo;
 };

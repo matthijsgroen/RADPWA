@@ -1,6 +1,7 @@
 import {
   ComponentMetaInformation,
   EventInfo,
+  ProductionInfo,
   PropertyInfo,
   Resolver,
 } from "../compiler-types";
@@ -66,6 +67,26 @@ const getEventTypes = (
   return properties;
 };
 
+const getProductionType = (
+  productionType: ts.Type | undefined,
+  printer: ts.Printer,
+  sourceFile: ts.SourceFile,
+): ProductionInfo | undefined => {
+  if (!productionType) {
+    return undefined;
+  }
+  const typeNode = productionType.symbol.declarations?.[0];
+  if (typeNode && ts.isTypeNode(typeNode)) {
+    return {
+      type: typeNode,
+      typeAsString: typeNode
+        ? printer.printNode(ts.EmitHint.Unspecified, typeNode, sourceFile)
+        : "unknown",
+    };
+  }
+  return undefined;
+};
+
 export const getProjectComponents = async (
   libFilePath: string,
   resolve: Resolver,
@@ -73,16 +94,16 @@ export const getProjectComponents = async (
   const filePath = resolve(libFilePath);
 
   const program = ts.createProgram([filePath], {});
-  const componentLibrarySource = program.getSourceFile(filePath);
+  const sourceFile = program.getSourceFile(filePath);
 
-  if (!componentLibrarySource) {
+  if (!sourceFile) {
     throw new Error("Components not found");
   }
   const typeChecker = program.getTypeChecker();
   const printer = ts.createPrinter();
 
   // Start from the export en crawl through the file for info
-  const exportAssignment = componentLibrarySource?.statements.find(
+  const exportAssignment = sourceFile?.statements.find(
     (statement): statement is ts.ExportAssignment =>
       ts.isExportAssignment(statement),
   );
@@ -103,39 +124,39 @@ export const getProjectComponents = async (
     const componentTypeName = componentType.aliasSymbol?.escapedName;
     if (componentTypeName === "VisualComponentDefinition") {
       const infoBlocks = componentType.aliasTypeArguments;
-      const propertyInfo = infoBlocks?.[0];
-      const properties = getPropertyTypes(
-        propertyInfo,
+      const properties = getPropertyTypes(infoBlocks?.[0], printer, sourceFile);
+      const events = getEventTypes(infoBlocks?.[1], printer, sourceFile);
+      const production = getProductionType(
+        infoBlocks?.[3],
         printer,
-        componentLibrarySource,
+        sourceFile,
       );
-      const eventInfo = infoBlocks?.[1];
-      const events = getEventTypes(eventInfo, printer, componentLibrarySource);
 
       components[componentName] = {
         componentName,
         isVisual: true,
         properties,
         events,
+        production,
         dependencies: [],
       };
     }
     if (componentTypeName === "ComponentDefinition") {
       const infoBlocks = componentType.aliasTypeArguments;
-      const propertyInfo = infoBlocks?.[0];
-      const properties = getPropertyTypes(
-        propertyInfo,
+      const properties = getPropertyTypes(infoBlocks?.[0], printer, sourceFile);
+      const events = getEventTypes(infoBlocks?.[1], printer, sourceFile);
+      const production = getProductionType(
+        infoBlocks?.[2],
         printer,
-        componentLibrarySource,
+        sourceFile,
       );
-      const eventInfo = infoBlocks?.[1];
-      const events = getEventTypes(eventInfo, printer, componentLibrarySource);
 
       components[componentName] = {
         componentName,
         isVisual: false,
         properties,
         events,
+        production,
         dependencies: [],
       };
     }
