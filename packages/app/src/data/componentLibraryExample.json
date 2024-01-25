@@ -1,0 +1,72 @@
+{
+  "Panel": {
+    "componentName": "Panel",
+    "isVisual": true,
+    "properties": {
+      "header": {
+        "type": "(ts.TypeNode)",
+        "typeAsString": "string"
+      }
+    },
+    "events": {},
+    "dependencies": []
+  },
+  "Button": {
+    "componentName": "Button",
+    "isVisual": true,
+    "properties": {
+      "caption": {
+        "type": "(ts.TypeNode)",
+        "typeAsString": "string"
+      },
+      "disabled": {
+        "type": "(ts.TypeNode)",
+        "typeAsString": "boolean"
+      }
+    },
+    "events": {
+      "onClick": {
+        "type": "(ts.TypeNode)",
+        "returnTypeAsString": "void",
+        "parameters": [["event", "React.MouseEvent"]]
+      }
+    },
+    "production": {
+      "type": "(ts.TypeNode)",
+      "typeAsString": "{\n    disabled: boolean;\n}"
+    },
+    "dependencies": []
+  },
+  "ComponentState": {
+    "componentName": "ComponentState",
+    "isVisual": false,
+    "properties": {
+      "initialValue": {
+        "type": "(ts.TypeNode)",
+        "typeAsString": "string"
+      }
+    },
+    "events": {},
+    "production": {
+      "type": "(ts.TypeNode)",
+      "typeAsString": "{\n    value: string;\n}"
+    },
+    "dependencies": []
+  },
+  "Text": {
+    "componentName": "Text",
+    "isVisual": true,
+    "properties": {
+      "content": {
+        "type": "(ts.TypeNode)",
+        "typeAsString": "string"
+      }
+    },
+    "events": {},
+    "production": {
+      "type": "(ts.TypeNode)",
+      "typeAsString": "{\n    content: string;\n}"
+    },
+    "dependencies": []
+  }
+}

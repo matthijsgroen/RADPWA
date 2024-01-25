@@ -13,6 +13,10 @@ import { Column, ColumnEditorOptions } from "primereact/column";
 import { InputText } from "primereact/inputtext";
 import { CodeHighlighter } from "./components/CodePreview";
 import { TriStateCheckbox } from "primereact/tristatecheckbox";
+import type {
+  RuiJSONFormat,
+  ComponentLibraryMetaInformation,
+} from "@rui/transform";
 
 type PropertyItem = {
   name: string;
@@ -20,7 +24,12 @@ type PropertyItem = {
   value: string | boolean | null | number;
 };
 
-const mainScreen = () => {
+type MainScreenProps = {
+  ruiComponents: RuiJSONFormat;
+  componentLibrary: ComponentLibraryMetaInformation;
+};
+
+const mainScreen = ({ ruiComponents, componentLibrary }: MainScreenProps) => {
   const user = useComponentState<string>("Initial value");
   const treeSource: TreeNode[] = useTreeData({
     getTreeData: async (): Promise<TreeNode[]> => {
