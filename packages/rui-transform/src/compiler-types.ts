@@ -36,20 +36,20 @@ export type ComponentDependency = {
 
 export type PropertyInfo = Record<
   string,
-  { type: ts.TypeNode | undefined; typeAsString: string }
+  { type?: ts.TypeNode; typeAsString: string }
 >;
 
 export type EventInfo = Record<
   string,
   {
-    type: ts.TypeNode | undefined;
+    type?: ts.TypeNode;
     returnTypeAsString: string;
     parameters: [name: string, typeAsString: string][];
   }
 >;
 
 export type ProductionInfo = {
-  type: ts.TypeNode | undefined;
+  type?: ts.TypeNode;
   typeAsString: string;
 };
 
