@@ -4,10 +4,21 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "source": "src/index.ts",
+  "bin": {
+    "rui-transform": "./bin/rui-transform.js"
+  },
   "scripts": {
-    "build": "parcel build"
+    "build": "parcel build",
+    "watch": "parcel watch"
+  },
+  "dependencies": {
+    "commander": "^11.1.0",
+    "typescript": "^5.3.3"
   },
   "peerDependencies": {
     "react": "^18.2.0"
+  },
+  "devDependencies": {
+    "parcel": "^2.11.0"
   }
 }

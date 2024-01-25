@@ -13,12 +13,14 @@ export type Scope = {
   readonly user: { value: string };
   readonly button1: { disabled: boolean };
   readonly button2: { disabled: boolean };
+  readonly text1: { content: string };
 };
 
 export const MainScreen = () => {
   const Button1 = Components.Button.vc;
   const Button2 = Components.Button.vc;
   const Panel1 = Components.Panel.vc;
+  const Text1 = Components.Text.vc;
 
   const properties = {
     Panel1: {
@@ -31,6 +33,7 @@ export const MainScreen = () => {
       caption: "Press me",
     } satisfies PropertiesOf<CL["Button"]>,
     Button2: { caption: "Disable other" } satisfies PropertiesOf<CL["Button"]>,
+    Text1: { content: "Hello world" } satisfies PropertiesOf<CL["Text"]>,
   };
 
   const events = {
@@ -44,23 +47,23 @@ export const MainScreen = () => {
 
   const scope: Scope = {
     user: Components.ComponentState.produce(properties.User),
-    button1: Components.Button.produce?.({
+    button1: Components.Button.produce({
       ...properties.Button1,
       ...events.Button1,
     }),
-    button2: Components.Button.produce?.({
+    button2: Components.Button.produce({
       ...properties.Button2,
       ...events.Button2,
     }),
+    text1: Components.Text.produce({ ...properties.Text1 }),
   };
 
   return (
     <Panel1
       {...properties.Panel1}
-      {...events.Panel1}
       children={
         <>
-          <p>This is a test {scope.user.value}</p>
+          <Text1 {...properties.Text1} {...scope.text1} />
           <Button1
             {...properties.Button1}
             {...scope.button1}
