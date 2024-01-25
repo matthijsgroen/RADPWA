@@ -70,6 +70,14 @@ const mainScreen = () => {
 
   `;
 
+  const postMessage = () => {
+    if (!window.vscode) throw new Error("vscode is not defined");
+    console.log("vscode: ", window.vscode);
+    window.vscode.postMessage({
+      type: "edit",
+    });
+  };
+
   return (
     <Pane>
       <Splitter>
@@ -146,8 +154,9 @@ const mainScreen = () => {
                 <Button
                   label={"Demo button"}
                   onClick={(event: React.MouseEvent): void => {
-                    console.log("Woohoo", user.value);
-                    user.value = "World";
+                    postMessage();
+                    // console.log("Woohoo", user.value);
+                    // user.value = "World";
                   }}
                 />
               </Pane>
