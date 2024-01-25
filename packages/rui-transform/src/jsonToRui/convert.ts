@@ -185,6 +185,47 @@ const writeComponentProperties = (
       .filter((empty): empty is ts.PropertyAssignment => empty !== undefined),
   );
 
+const createEventHandler = (
+  component: RuiDataComponent | RuiVisualComponent,
+  eventName: string,
+  eventHandlerName: string,
+  vcl: Record<string, ComponentMetaInformation>,
+) => {
+  const functionType = vcl[component.component].events[eventName].type;
+  if (functionType && ts.isFunctionTypeNode(functionType)) {
+    return f.createArrowFunction(
+      undefined,
+      undefined,
+      functionType.parameters,
+      undefined,
+      f.createToken(ts.SyntaxKind.EqualsGreaterThanToken),
+      f.createCallExpression(
+        f.createPropertyAccessExpression(
+          f.createCallExpression(
+            f.createIdentifier("eventHandlers"),
+            undefined,
+            [f.createIdentifier("scope")],
+          ),
+          f.createIdentifier(eventHandlerName),
+        ),
+        undefined,
+        functionType.parameters.map<ts.Identifier>((p, i) =>
+          ts.isIdentifier(p.name) ? p.name : f.createIdentifier(`a${i}`),
+        ),
+      ),
+    );
+  }
+
+  return f.createArrowFunction(
+    undefined,
+    undefined,
+    [],
+    undefined,
+    f.createToken(ts.SyntaxKind.EqualsGreaterThanToken),
+    f.createBlock([]),
+  );
+};
+
 const writeComponentEvents = (
   flatComponentList: (RuiDataComponent | RuiVisualComponent)[],
   vcl: Record<string, ComponentMetaInformation>,
@@ -203,7 +244,7 @@ const writeComponentEvents = (
                 ([k, v]) =>
                   f.createPropertyAssignment(
                     f.createIdentifier(k),
-                    f.createStringLiteral("foobar"),
+                    createEventHandler(component, k, v, vcl),
                   ),
               ),
               true,
@@ -254,8 +295,6 @@ export const convertJsonToRui = async (
     structure.componentLibrary,
     resolve,
   );
-
-  console.log(Object.keys(componentLibraryInfo));
 
   const flatComponentList = getFlatComponentList(structure);
   const missingComponents = flatComponentList
