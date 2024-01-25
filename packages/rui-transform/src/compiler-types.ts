@@ -61,3 +61,8 @@ export type ComponentMetaInformation = {
   produces?: ProductionInfo;
   events: EventInfo;
 };
+
+export type ComponentLibraryMetaInformation = Record<
+  string,
+  ComponentMetaInformation
+>;

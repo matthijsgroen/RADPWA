@@ -1,4 +1,5 @@
 import {
+  ComponentLibraryMetaInformation,
   ComponentMetaInformation,
   EventInfo,
   ProductionInfo,
@@ -158,7 +159,7 @@ const getComponentInfoFromDeclaration = (
 export const getProjectComponents = async (
   libFilePath: string,
   resolve: Resolver,
-) => {
+): Promise<ComponentLibraryMetaInformation> => {
   const filePath = resolve(libFilePath);
 
   const program = ts.createProgram([filePath], {});
