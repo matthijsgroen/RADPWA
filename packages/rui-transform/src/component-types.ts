@@ -4,16 +4,18 @@ export type ComponentDefinition<
   TProps = {},
   TEvents = {},
   TProduceResult = void,
-> = {
-  produce: (props: Partial<TProps & TEvents>) => TProduceResult;
-};
+> = { description?: string } & void extends TProduceResult
+  ? {}
+  : {
+      produce: (props: Partial<TProps & TEvents>) => TProduceResult;
+    };
 
 export type VisualComponentDefinition<
   TProps = {},
   TEvents = {},
   TChildren = {},
   TProduceResult = void,
-> = Partial<ComponentDefinition<TProps, TEvents, TProduceResult>> & {
+> = ComponentDefinition<TProps, TEvents, TProduceResult> & {
   /**
    * Visual Component
    */
