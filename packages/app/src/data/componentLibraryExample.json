@@ -4,7 +4,6 @@
     "isVisual": true,
     "properties": {
       "header": {
-        "type": "(ts.TypeNode)",
         "typeAsString": "string"
       }
     },
@@ -16,23 +15,19 @@
     "isVisual": true,
     "properties": {
       "caption": {
-        "type": "(ts.TypeNode)",
         "typeAsString": "string"
       },
       "disabled": {
-        "type": "(ts.TypeNode)",
         "typeAsString": "boolean"
       }
     },
     "events": {
       "onClick": {
-        "type": "(ts.TypeNode)",
         "returnTypeAsString": "void",
         "parameters": [["event", "React.MouseEvent"]]
       }
     },
-    "production": {
-      "type": "(ts.TypeNode)",
+    "produces": {
       "typeAsString": "{\n    disabled: boolean;\n}"
     },
     "dependencies": []
@@ -42,13 +37,11 @@
     "isVisual": false,
     "properties": {
       "initialValue": {
-        "type": "(ts.TypeNode)",
         "typeAsString": "string"
       }
     },
     "events": {},
-    "production": {
-      "type": "(ts.TypeNode)",
+    "produces": {
       "typeAsString": "{\n    value: string;\n}"
     },
     "dependencies": []
@@ -58,13 +51,11 @@
     "isVisual": true,
     "properties": {
       "content": {
-        "type": "(ts.TypeNode)",
         "typeAsString": "string"
       }
     },
     "events": {},
-    "production": {
-      "type": "(ts.TypeNode)",
+    "produces": {
       "typeAsString": "{\n    content: string;\n}"
     },
     "dependencies": []
