@@ -106,7 +106,6 @@ const getComponentInfoFromDeclaration = (
 ): ComponentMetaInformation | undefined => {
   if (node.type && ts.isTypeReferenceNode(node.type)) {
     const typeName = (node.type.typeName as ts.Identifier).text;
-    console.log(typeName);
 
     if (typeName === "VisualComponentDefinition") {
       const typeArguments =
@@ -202,7 +201,6 @@ export const getProjectComponents = async (
           printer,
           sourceFile,
         );
-        console.log(componentInfo);
         if (componentInfo) {
           components[componentName] = componentInfo;
         }
