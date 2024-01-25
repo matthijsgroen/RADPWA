@@ -10,6 +10,9 @@ export type {
   RuiJSONFormat,
   RuiDataComponent,
   RuiVisualComponent,
+  ComponentLibraryMetaInformation,
+  ComponentMetaInformation,
+  ComponentDependency,
 } from "./compiler-types";
 
 export { run } from "./cli";
