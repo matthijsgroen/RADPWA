@@ -449,19 +449,6 @@ export const convertJsonToRui = async (
     );
   }
 
-  //   console.log(
-  //     JSON.stringify(
-  //       componentLibraryInfo,
-  //       (_key, value) => {
-  //         if (value && ts.isTypeNode(value)) {
-  //           return "(ts.TypeNode)";
-  //         }
-  //         return value;
-  //       },
-  //       2,
-  //     ),
-  //   );
-
   const sourceFile = f.createSourceFile(
     [
       reactImport(),
