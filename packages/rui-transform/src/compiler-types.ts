@@ -58,6 +58,11 @@ export type ComponentMetaInformation = {
   dependencies: ComponentDependency[];
   isVisual: boolean;
   properties: PropertyInfo;
-  production?: ProductionInfo;
+  produces?: ProductionInfo;
   events: EventInfo;
 };
+
+export type ComponentLibraryMetaInformation = Record<
+  string,
+  ComponentMetaInformation
+>;

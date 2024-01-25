@@ -1,4 +1,5 @@
 import {
+  ComponentLibraryMetaInformation,
   ComponentMetaInformation,
   EventInfo,
   ProductionInfo,
@@ -8,13 +9,18 @@ import {
 import ts from "typescript";
 
 const getPropertyTypes = (
-  propertyType: ts.Type | undefined,
+  propertyType: ts.TypeNode | undefined,
+  typeChecker: ts.TypeChecker,
   printer: ts.Printer,
   sourceFile: ts.SourceFile,
 ): PropertyInfo => {
   const properties: PropertyInfo = {};
-  if (propertyType) {
-    propertyType.symbol.members?.forEach((member) => {
+
+  const typeInfo = propertyType
+    ? typeChecker.getTypeAtLocation(propertyType)
+    : undefined;
+  if (typeInfo) {
+    typeInfo.symbol.members?.forEach((member) => {
       if (
         member.valueDeclaration &&
         ts.isPropertySignature(member.valueDeclaration)
@@ -33,7 +39,8 @@ const getPropertyTypes = (
 };
 
 const getEventTypes = (
-  eventType: ts.Type | undefined,
+  eventType: ts.TypeNode | undefined,
+  typeChecker: ts.TypeChecker,
   printer: ts.Printer,
   sourceFile: ts.SourceFile,
 ): EventInfo => {
@@ -41,8 +48,12 @@ const getEventTypes = (
   const print = (node: ts.Node) =>
     printer.printNode(ts.EmitHint.Unspecified, node, sourceFile);
 
-  if (eventType) {
-    eventType.symbol.members?.forEach((member) => {
+  const eventInfo = eventType
+    ? typeChecker.getTypeAtLocation(eventType)
+    : undefined;
+
+  if (eventInfo) {
+    eventInfo.symbol.members?.forEach((member) => {
       if (
         member.valueDeclaration &&
         ts.isPropertySignature(member.valueDeclaration)
@@ -68,21 +79,79 @@ const getEventTypes = (
 };
 
 const getProductionType = (
-  productionType: ts.Type | undefined,
+  productionTypeNode: ts.TypeNode | undefined,
   printer: ts.Printer,
   sourceFile: ts.SourceFile,
 ): ProductionInfo | undefined => {
-  if (!productionType) {
+  if (!productionTypeNode) {
     return undefined;
   }
-  const typeNode = productionType.symbol.declarations?.[0];
-  if (typeNode && ts.isTypeNode(typeNode)) {
-    return {
-      type: typeNode,
-      typeAsString: typeNode
-        ? printer.printNode(ts.EmitHint.Unspecified, typeNode, sourceFile)
-        : "unknown",
-    };
+  return {
+    type: productionTypeNode,
+    typeAsString: productionTypeNode
+      ? printer.printNode(
+          ts.EmitHint.Unspecified,
+          productionTypeNode,
+          sourceFile,
+        )
+      : "unknown",
+  };
+};
+
+const getComponentInfoFromDeclaration = (
+  node: ts.VariableDeclaration,
+  typeChecker: ts.TypeChecker,
+  printer: ts.Printer,
+  sourceFile: ts.SourceFile,
+): ComponentMetaInformation | undefined => {
+  if (node.type && ts.isTypeReferenceNode(node.type)) {
+    const typeName = (node.type.typeName as ts.Identifier).text;
+    console.log(typeName);
+
+    if (typeName === "VisualComponentDefinition") {
+      const typeArguments =
+        node.type.typeArguments ?? ts.factory.createNodeArray();
+      return {
+        componentName: node.name.getText(),
+        isVisual: true,
+        properties: getPropertyTypes(
+          typeArguments[0],
+          typeChecker,
+          printer,
+          sourceFile,
+        ),
+        events: getEventTypes(
+          typeArguments[1],
+          typeChecker,
+          printer,
+          sourceFile,
+        ),
+        produces: getProductionType(typeArguments[3], printer, sourceFile),
+        dependencies: [],
+      };
+    }
+    if (typeName === "ComponentDefinition") {
+      const typeArguments =
+        node.type.typeArguments ?? ts.factory.createNodeArray();
+      return {
+        componentName: node.name.getText(),
+        isVisual: false,
+        properties: getPropertyTypes(
+          typeArguments[0],
+          typeChecker,
+          printer,
+          sourceFile,
+        ),
+        events: getEventTypes(
+          typeArguments[1],
+          typeChecker,
+          printer,
+          sourceFile,
+        ),
+        produces: getProductionType(typeArguments[2], printer, sourceFile),
+        dependencies: [],
+      };
+    }
   }
   return undefined;
 };
@@ -90,7 +159,7 @@ const getProductionType = (
 export const getProjectComponents = async (
   libFilePath: string,
   resolve: Resolver,
-) => {
+): Promise<ComponentLibraryMetaInformation> => {
   const filePath = resolve(libFilePath);
 
   const program = ts.createProgram([filePath], {});
@@ -116,49 +185,28 @@ export const getProjectComponents = async (
   const typeInfo = typeChecker.getTypeAtLocation(exportAssignment.expression);
   typeInfo.symbol.members?.forEach((member) => {
     const componentName = `${member.escapedName}`;
-    const componentCode = member.valueDeclaration;
-    if (!componentCode) {
-      return;
-    }
-    const componentType = typeChecker.getTypeAtLocation(componentCode);
-    const componentTypeName = componentType.aliasSymbol?.escapedName;
-    if (componentTypeName === "VisualComponentDefinition") {
-      const infoBlocks = componentType.aliasTypeArguments;
-      const properties = getPropertyTypes(infoBlocks?.[0], printer, sourceFile);
-      const events = getEventTypes(infoBlocks?.[1], printer, sourceFile);
-      const production = getProductionType(
-        infoBlocks?.[3],
-        printer,
-        sourceFile,
+    if (
+      member.valueDeclaration &&
+      ts.isShorthandPropertyAssignment(member.valueDeclaration)
+    ) {
+      const assignmentReference = typeChecker.getShorthandAssignmentValueSymbol(
+        member.valueDeclaration,
       );
-
-      components[componentName] = {
-        componentName,
-        isVisual: true,
-        properties,
-        events,
-        production,
-        dependencies: [],
-      };
-    }
-    if (componentTypeName === "ComponentDefinition") {
-      const infoBlocks = componentType.aliasTypeArguments;
-      const properties = getPropertyTypes(infoBlocks?.[0], printer, sourceFile);
-      const events = getEventTypes(infoBlocks?.[1], printer, sourceFile);
-      const production = getProductionType(
-        infoBlocks?.[2],
-        printer,
-        sourceFile,
-      );
-
-      components[componentName] = {
-        componentName,
-        isVisual: false,
-        properties,
-        events,
-        production,
-        dependencies: [],
-      };
+      if (
+        assignmentReference?.valueDeclaration &&
+        ts.isVariableDeclaration(assignmentReference.valueDeclaration)
+      ) {
+        const componentInfo = getComponentInfoFromDeclaration(
+          assignmentReference.valueDeclaration,
+          typeChecker,
+          printer,
+          sourceFile,
+        );
+        console.log(componentInfo);
+        if (componentInfo) {
+          components[componentName] = componentInfo;
+        }
+      }
     }
   });
 

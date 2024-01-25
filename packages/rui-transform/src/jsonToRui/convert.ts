@@ -1,4 +1,5 @@
-import ts, { ImportSpecifier, NodeFlags, SyntaxKind } from "typescript";
+import prettier from "prettier";
+import ts, { factory as f } from "typescript";
 import {
   ComponentMetaInformation,
   Resolver,
@@ -7,8 +8,8 @@ import {
   RuiVisualComponent,
 } from "../compiler-types";
 import { getProjectComponents } from "../componentLibrary/getProjectComponents";
-
-const f = ts.factory;
+import { capitalize } from "../string-utils";
+import { convertValue } from "../value-utils";
 
 const getFlatComponentList = (
   structure: RuiJSONFormat,
@@ -42,7 +43,7 @@ const helpersImport = () =>
       true,
       undefined,
       f.createNamedImports(
-        ["PropertiesOf", "EventsOf"].map<ImportSpecifier>((name) =>
+        ["PropertiesOf", "EventsOf"].map<ts.ImportSpecifier>((name) =>
           f.createImportSpecifier(false, undefined, f.createIdentifier(name)),
         ),
       ),
@@ -78,40 +79,210 @@ export const defineScopeType = (
 ) =>
   f.createTypeAliasDeclaration(
     [f.createToken(ts.SyntaxKind.ExportKeyword)],
-    f.createIdentifier("Scope"),
+    "Scope",
     undefined,
     f.createTypeLiteralNode(
       flatComponentList
-        .filter((c) => c.component && vcl[c.component].production)
+        .filter(
+          (c) =>
+            c.component &&
+            vcl[c.component] &&
+            vcl[c.component].produces !== undefined,
+        )
         .map((c) =>
           f.createPropertySignature(
             [f.createToken(ts.SyntaxKind.ReadonlyKeyword)],
             c.id,
             undefined,
-            vcl[c.component].production?.type,
+            vcl[c.component].produces?.type,
           ),
         ),
     ),
   );
 
+const wireVisualComponentsToReactComponents = (
+  flatComponentList: (RuiDataComponent | RuiVisualComponent)[],
+  vcl: Record<string, ComponentMetaInformation>,
+) =>
+  flatComponentList
+    .filter((c) => vcl[c.component].isVisual)
+    .map((c) =>
+      f.createVariableStatement(
+        undefined,
+        f.createVariableDeclarationList(
+          [
+            f.createVariableDeclaration(
+              f.createIdentifier(capitalize(c.id)),
+              undefined,
+              undefined,
+              f.createPropertyAccessExpression(
+                f.createPropertyAccessExpression(
+                  f.createIdentifier("Components"),
+                  f.createIdentifier(c.component),
+                ),
+                f.createIdentifier("vc"),
+              ),
+            ),
+          ],
+          ts.NodeFlags.Const,
+        ),
+      ),
+    );
+
+const writeConstObject = (
+  name: string,
+  type: ts.TypeNode | undefined,
+  members: ts.PropertyAssignment[],
+) =>
+  f.createVariableStatement(
+    undefined,
+    f.createVariableDeclarationList(
+      [
+        f.createVariableDeclaration(
+          f.createIdentifier(name),
+          undefined,
+          undefined,
+          f.createObjectLiteralExpression(members, true),
+        ),
+      ],
+      ts.NodeFlags.Const,
+    ),
+  );
+
+const writeComponentProperties = (
+  flatComponentList: (RuiDataComponent | RuiVisualComponent)[],
+) =>
+  writeConstObject(
+    "properties",
+    undefined,
+    flatComponentList
+      .filter((component) => component.props)
+      .map<ts.PropertyAssignment>((component) => {
+        return f.createPropertyAssignment(
+          f.createIdentifier(capitalize(component.id)),
+          f.createSatisfiesExpression(
+            f.createObjectLiteralExpression(
+              Object.entries(component.props || {}).map<ts.PropertyAssignment>(
+                ([k, v]) =>
+                  f.createPropertyAssignment(
+                    f.createIdentifier(k),
+                    convertValue(v),
+                  ),
+              ),
+              true,
+            ),
+            f.createTypeReferenceNode(f.createIdentifier("PropertiesOf"), [
+              f.createIndexedAccessTypeNode(
+                f.createTypeReferenceNode(f.createIdentifier("CL"), undefined),
+                f.createLiteralTypeNode(
+                  f.createStringLiteral(component.component),
+                ),
+              ),
+            ]),
+          ),
+        );
+      })
+      .filter((empty): empty is ts.PropertyAssignment => empty !== undefined),
+  );
+
+const createEventHandler = (
+  component: RuiDataComponent | RuiVisualComponent,
+  eventName: string,
+  eventHandlerName: string,
+  vcl: Record<string, ComponentMetaInformation>,
+) => {
+  const functionType = vcl[component.component].events[eventName].type;
+  if (functionType && ts.isFunctionTypeNode(functionType)) {
+    return f.createArrowFunction(
+      undefined,
+      undefined,
+      functionType.parameters,
+      undefined,
+      f.createToken(ts.SyntaxKind.EqualsGreaterThanToken),
+      f.createCallExpression(
+        f.createPropertyAccessExpression(
+          f.createCallExpression(
+            f.createIdentifier("eventHandlers"),
+            undefined,
+            [f.createIdentifier("scope")],
+          ),
+          f.createIdentifier(eventHandlerName),
+        ),
+        undefined,
+        functionType.parameters.map<ts.Identifier>((p, i) =>
+          ts.isIdentifier(p.name) ? p.name : f.createIdentifier(`a${i}`),
+        ),
+      ),
+    );
+  }
+
+  return f.createArrowFunction(
+    undefined,
+    undefined,
+    [],
+    undefined,
+    f.createToken(ts.SyntaxKind.EqualsGreaterThanToken),
+    f.createBlock([]),
+  );
+};
+
+const writeComponentEvents = (
+  flatComponentList: (RuiDataComponent | RuiVisualComponent)[],
+  vcl: Record<string, ComponentMetaInformation>,
+) =>
+  writeConstObject(
+    "events",
+    undefined,
+    flatComponentList
+      .filter((c) => c.events)
+      .map((component) =>
+        f.createPropertyAssignment(
+          capitalize(component.id),
+          f.createSatisfiesExpression(
+            f.createObjectLiteralExpression(
+              Object.entries(component.events || {}).map<ts.PropertyAssignment>(
+                ([k, v]) =>
+                  f.createPropertyAssignment(
+                    f.createIdentifier(k),
+                    createEventHandler(component, k, v, vcl),
+                  ),
+              ),
+              true,
+            ),
+            f.createTypeReferenceNode(f.createIdentifier("EventsOf"), [
+              f.createIndexedAccessTypeNode(
+                f.createTypeReferenceNode(f.createIdentifier("CL"), undefined),
+                f.createLiteralTypeNode(
+                  f.createStringLiteral(component.component),
+                ),
+              ),
+            ]),
+          ),
+        ),
+      ),
+  );
+
 const createComponentFunction = (name: string, statements: ts.Statement[]) =>
   f.createVariableStatement(
     [f.createToken(ts.SyntaxKind.ExportKeyword)],
-    f.createVariableDeclarationList([
-      f.createVariableDeclaration(
-        f.createIdentifier(name),
-        undefined,
-        undefined,
-        f.createArrowFunction(
+    f.createVariableDeclarationList(
+      [
+        f.createVariableDeclaration(
+          f.createIdentifier(name),
           undefined,
           undefined,
-          [],
-          undefined,
-          f.createToken(ts.SyntaxKind.EqualsGreaterThanToken),
-          f.createBlock(statements),
+          f.createArrowFunction(
+            undefined,
+            undefined,
+            [],
+            undefined,
+            f.createToken(ts.SyntaxKind.EqualsGreaterThanToken),
+            f.createBlock(statements),
+          ),
         ),
-      ),
-    ]),
+      ],
+      ts.NodeFlags.Const,
+    ),
   );
 
 export const convertJsonToRui = async (
@@ -126,6 +297,15 @@ export const convertJsonToRui = async (
   );
 
   const flatComponentList = getFlatComponentList(structure);
+  const missingComponents = flatComponentList
+    .map((c) => c.component)
+    .filter((c) => !componentLibraryInfo[c]);
+
+  if (missingComponents.length > 0) {
+    throw new Error(
+      `Defined components are missing from the library: ${missingComponents.join(", ")}`,
+    );
+  }
 
   //   console.log(
   //     JSON.stringify(
@@ -148,13 +328,22 @@ export const convertJsonToRui = async (
       eventHandlersImport(structure.eventHandlers),
       defineComponentTypes(),
       defineScopeType(flatComponentList, componentLibraryInfo),
-      createComponentFunction(structure.id, []),
+      createComponentFunction(structure.id, [
+        ...wireVisualComponentsToReactComponents(
+          flatComponentList,
+          componentLibraryInfo,
+        ),
+        writeComponentProperties(flatComponentList),
+        writeComponentEvents(flatComponentList, componentLibraryInfo),
+      ]),
     ],
-    f.createToken(SyntaxKind.EndOfFileToken),
-    NodeFlags.None,
+    f.createToken(ts.SyntaxKind.EndOfFileToken),
+    ts.NodeFlags.None,
   );
 
-  const contents = printer.printFile(sourceFile);
+  const contents = prettier.format(printer.printFile(sourceFile), {
+    parser: "typescript",
+  });
 
   return contents;
 };
