@@ -55,10 +55,32 @@ const ComponentState: ComponentDefinition<
   produce: (props) => useComponentState(props.initialValue ?? ""),
 };
 
+const Text: VisualComponentDefinition<
+  { content: string },
+  {},
+  {},
+  { content: string }
+> = {
+  vc: (props) => <p>{props.content}</p>,
+  produce: (props) => {
+    const contentState = useComponentState(props.content ?? "");
+    return {
+      ...props,
+      get content() {
+        return contentState.value;
+      },
+      set content(newValue: string) {
+        contentState.value = newValue;
+      },
+    };
+  },
+};
+
 const componentLibrary = {
   Panel,
   Button,
   ComponentState,
+  Text,
 } as const satisfies ComponentLibrary;
 
 export default componentLibrary;

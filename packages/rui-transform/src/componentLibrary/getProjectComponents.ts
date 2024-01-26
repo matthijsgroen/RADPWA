@@ -126,7 +126,8 @@ const getComponentInfoFromDeclaration = (
           sourceFile,
         ),
         produces: getProductionType(typeArguments[3], printer, sourceFile),
-        dependencies: [],
+        dependencies: [], // TODO
+        childContainers: {}, // TODO
       };
     }
     if (typeName === "ComponentDefinition") {
@@ -148,7 +149,8 @@ const getComponentInfoFromDeclaration = (
           sourceFile,
         ),
         produces: getProductionType(typeArguments[2], printer, sourceFile),
-        dependencies: [],
+        dependencies: [], // TODO
+        childContainers: {}, // TODO
       };
     }
   }

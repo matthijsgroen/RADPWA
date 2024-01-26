@@ -53,6 +53,14 @@ export type ProductionInfo = {
   typeAsString: string;
 };
 
+export type ChildContainer = {
+  type?: ts.TypeNode;
+  typeAsString: string;
+  // could be extended with 'limits'
+};
+
+export type ChildContainers = Record<string, ChildContainer>;
+
 export type ComponentMetaInformation = {
   componentName: string;
   dependencies: ComponentDependency[];
@@ -60,6 +68,7 @@ export type ComponentMetaInformation = {
   properties: PropertyInfo;
   produces?: ProductionInfo;
   events: EventInfo;
+  childContainers: ChildContainers;
 };
 
 export type ComponentLibraryMetaInformation = Record<
