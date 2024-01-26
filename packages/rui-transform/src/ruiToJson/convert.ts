@@ -133,7 +133,18 @@ const getEventsFor = (
       }
 
       if (objectLiteral) {
-        // TODO: extract function names
+        ts.forEachChild(objectLiteral, (node) => {
+          if (
+            ts.isPropertyAssignment(node) &&
+            ts.isIdentifier(node.name) &&
+            ts.isArrowFunction(node.initializer) &&
+            ts.isCallExpression(node.initializer.body) &&
+            ts.isPropertyAccessExpression(node.initializer.body.expression) &&
+            ts.isIdentifier(node.initializer.body.expression.name)
+          ) {
+            result[node.name.text] = node.initializer.body.expression.name.text;
+          }
+        });
       }
     }
   });
@@ -247,7 +258,6 @@ const convertJSXtoComponent = (
     ];
   }
   if (ts.isJsxFragment(element)) {
-    console.log("Fragment!");
     return element.children.flatMap((node) =>
       convertJSXtoComponent(node, componentMapping, vcl, properties, events),
     );
