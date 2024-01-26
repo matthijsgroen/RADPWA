@@ -1249,8 +1249,12 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@rui/prime-react@workspace:packages/rui-prime-react"
   dependencies:
-    "@rui/react-compiler": "workspace:^"
+    "@rui/transform": "workspace:^"
     parcel: "npm:^2.11.0"
+    primereact: "npm:^10.3.3"
+  peerDependencies:
+    react: ^18.2.0
+    react-dom: ^18.2.0
   languageName: unknown
   linkType: soft
 
@@ -3936,6 +3940,23 @@ __metadata:
     "@types/react":
       optional: true
   checksum: 19e2ff07ca34a3daad03717426cb54f1f3711ab499d223d73d3479aa4d6cf1d8164a916a9a83a2cc2d108d34f98d25931e8ed95175286ed0fc9dde81a68b72c2
+  languageName: node
+  linkType: hard
+
+"primereact@npm:^10.3.3":
+  version: 10.3.3
+  resolution: "primereact@npm:10.3.3"
+  dependencies:
+    "@types/react-transition-group": "npm:^4.4.1"
+    react-transition-group: "npm:^4.4.1"
+  peerDependencies:
+    "@types/react": ^17.0.0 || ^18.0.0
+    react: ^17.0.0 || ^18.0.0
+    react-dom: ^17.0.0 || ^18.0.0
+  peerDependenciesMeta:
+    "@types/react":
+      optional: true
+  checksum: 7715179c6bb9c4bc1424ee4b34665906e791e8d9a3d4827611fef08ce8a28497a5eec3372433be27cad0cfb58d8fc5c21ad0b51a01f3076609d30e3d861ccfa2
   languageName: node
   linkType: hard
 

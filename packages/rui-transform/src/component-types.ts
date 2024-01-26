@@ -4,11 +4,16 @@ export type ComponentDefinition<
   TProps = {},
   TEvents = {},
   TProduceResult = void,
-> = { description?: string } & void extends TProduceResult
+> = {
+  description?: string;
+} & (void extends TProduceResult
   ? {}
   : {
       produce: (props: Partial<TProps & TEvents>) => TProduceResult;
-    };
+    }) & {
+    //https://github.com/microsoft/TypeScript/issues/31940#issuecomment-839659248
+    __RuiComponentBrand?: undefined;
+  };
 
 export type VisualComponentDefinition<
   TProps = {},
@@ -20,6 +25,9 @@ export type VisualComponentDefinition<
    * Visual Component
    */
   vc: (props: Partial<TProps & TEvents & TChildren>) => ReactNode;
+} & {
+  //https://github.com/microsoft/TypeScript/issues/31940#issuecomment-839659248
+  __RuiVisualComponentBrand?: undefined;
 };
 
 export type ComponentLibrary = Record<

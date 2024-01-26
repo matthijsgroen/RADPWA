@@ -17,6 +17,7 @@
     "tailwindcss": "^3.4.1"
   },
   "scripts": {
-    "start": "parcel serve src/index.html"
+    "start": "parcel serve src/index.html",
+    "transform": "rui-transform"
   }
 }

@@ -1,7 +1,5 @@
 import ts from "typescript";
 
-export type Resolver = (module: string) => string;
-
 export type RuiDataComponent = {
   id: string;
   component: string;

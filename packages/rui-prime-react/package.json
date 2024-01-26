@@ -1,13 +1,21 @@
 {
   "name": "@rui/prime-react",
   "version": "1.0.0-alpha",
-  "source": "src/index.ts",
+  "source": "src/index.tsx",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "build": "parcel build"
   },
   "devDependencies": {
-    "@rui/react-compiler": "workspace:^",
+    "@rui/transform": "workspace:^",
     "parcel": "^2.11.0"
+  },
+  "dependencies": {
+    "primereact": "^10.3.3"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   }
 }

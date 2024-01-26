@@ -1,12 +1,10 @@
-import ts, { StringLiteral } from "typescript";
+import ts from "typescript";
 import {
   ComponentLibraryMetaInformation,
-  Resolver,
   RuiDataComponent,
   RuiJSONFormat,
   RuiVisualComponent,
 } from "../compiler-types";
-import { getProjectComponents } from "../componentLibrary/getProjectComponents";
 import { capitalize, uncapitalize } from "../string-utils";
 import { valueToJSON } from "../value-utils";
 
@@ -306,14 +304,23 @@ const extractComposition = (
 };
 
 export const convertRuiToJson = async (
-  tsxSource: string,
-  resolve: Resolver,
+  program: ts.Program,
+  sourcePath: string,
+  vcl: ComponentLibraryMetaInformation,
 ): Promise<RuiJSONFormat> => {
-  const sourceFile = ts.createSourceFile("source.rui.tsx", tsxSource, {
-    languageVersion: ts.ScriptTarget.Latest,
-  });
+  const sourceFile = program.getSourceFile(sourcePath);
+  if (!sourceFile) {
+    return {
+      componentLibrary: "",
+      eventHandlers: "",
+      id: "NewScreen",
+      components: [],
+      composition: [],
+    };
+  }
 
   let componentLibrary = "";
+  let componentImport = undefined as ts.Identifier | undefined;
   let eventHandlers = "";
   let id = "";
   // https://stackoverflow.com/questions/61597612/how-to-properly-handle-let-variables-with-callbacks-in-typescript
@@ -328,7 +335,8 @@ export const convertRuiToJson = async (
       ts.isIdentifier(node.importClause.name) &&
       node.importClause.name.text === "Components"
     ) {
-      componentLibrary = (node.moduleSpecifier as StringLiteral).text;
+      componentImport = node.importClause.name;
+      componentLibrary = (node.moduleSpecifier as ts.StringLiteral).text;
     }
     if (
       ts.isImportDeclaration(node) &&
@@ -338,7 +346,7 @@ export const convertRuiToJson = async (
       ts.isIdentifier(node.importClause.name) &&
       node.importClause.name.text === "eventHandlers"
     ) {
-      eventHandlers = (node.moduleSpecifier as StringLiteral).text;
+      eventHandlers = (node.moduleSpecifier as ts.StringLiteral).text;
     }
     if (
       ts.isVariableStatement(node) &&
@@ -358,7 +366,7 @@ export const convertRuiToJson = async (
     }
   });
 
-  if (!component) {
+  if (!component || !componentImport) {
     return {
       componentLibrary,
       eventHandlers,
@@ -368,10 +376,8 @@ export const convertRuiToJson = async (
     };
   }
 
-  const componentLibraryInfo = await getProjectComponents(
-    componentLibrary,
-    resolve,
-  );
+  // const componentsFile = program.getSourceFile(componentsFileResolve);
+  // console.log(componentsFile);
 
   let properties = undefined as ts.ObjectLiteralExpression | undefined;
   let events = undefined as ts.ObjectLiteralExpression | undefined;
@@ -427,7 +433,7 @@ export const convertRuiToJson = async (
           const propertyAccess = node.initializer.expression.expression;
           const componentName = propertyAccess.name.text;
 
-          const componentInfo = componentLibraryInfo[componentName];
+          const componentInfo = vcl[componentName];
           if (componentInfo && componentInfo.isVisual === false) {
             const props = getPropertiesFor(properties, capitalize(id));
             const eventHandlers = getEventsFor(events, capitalize(id));
@@ -447,7 +453,7 @@ export const convertRuiToJson = async (
   const composition = extractComposition(
     component,
     componentMapping,
-    componentLibraryInfo,
+    vcl,
     properties,
     events,
   );

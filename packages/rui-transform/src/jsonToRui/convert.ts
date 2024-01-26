@@ -1,19 +1,16 @@
 import prettier from "prettier";
 import ts, {
   ObjectLiteralElementLike,
-  PropertyAssignment,
   addSyntheticLeadingComment,
   factory as f,
 } from "typescript";
 import {
   ComponentLibraryMetaInformation,
   ComponentMetaInformation,
-  Resolver,
   RuiDataComponent,
   RuiJSONFormat,
   RuiVisualComponent,
 } from "../compiler-types";
-import { getProjectComponents } from "../componentLibrary/getProjectComponents";
 import { capitalize } from "../string-utils";
 import { convertValue } from "../value-utils";
 
@@ -433,19 +430,14 @@ const createCommentBlock = (lines: string[]): string =>
 
 export const convertJsonToRui = async (
   structure: RuiJSONFormat,
-  resolve: Resolver,
+  vcl: ComponentLibraryMetaInformation,
 ): Promise<string> => {
   const printer = ts.createPrinter();
-
-  const componentLibraryInfo = await getProjectComponents(
-    structure.componentLibrary,
-    resolve,
-  );
 
   const flatComponentList = getFlatComponentList(structure);
   const missingComponents = flatComponentList
     .map((c) => c.component)
-    .filter((c) => !componentLibraryInfo[c]);
+    .filter((c) => !vcl[c]);
 
   if (missingComponents.length > 0) {
     throw new Error(
@@ -469,23 +461,16 @@ export const convertJsonToRui = async (
       componentsImport(structure.componentLibrary),
       eventHandlersImport(structure.eventHandlers),
       defineComponentTypes(),
-      defineScopeType(flatComponentList, componentLibraryInfo),
+      defineScopeType(flatComponentList, vcl),
       createComponentFunction(structure.id, [
-        ...wireVisualComponentsToReactComponents(
-          flatComponentList,
-          componentLibraryInfo,
-        ),
+        ...wireVisualComponentsToReactComponents(flatComponentList, vcl),
         writeComponentProperties(flatComponentList),
-        writeComponentEvents(flatComponentList, componentLibraryInfo),
-        writeScope(flatComponentList, componentLibraryInfo),
+        writeComponentEvents(flatComponentList, vcl),
+        writeScope(flatComponentList, vcl),
 
         f.createReturnStatement(
           f.createParenthesizedExpression(
-            writeCompositionTree(
-              structure.composition,
-              flatComponentList,
-              componentLibraryInfo,
-            ),
+            writeCompositionTree(structure.composition, flatComponentList, vcl),
           ),
         ),
       ]),
