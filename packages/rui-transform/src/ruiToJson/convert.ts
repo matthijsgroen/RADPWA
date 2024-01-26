@@ -1,12 +1,13 @@
 import ts, { StringLiteral } from "typescript";
 import {
+  ComponentLibraryMetaInformation,
   Resolver,
   RuiDataComponent,
   RuiJSONFormat,
   RuiVisualComponent,
 } from "../compiler-types";
 import { getProjectComponents } from "../componentLibrary/getProjectComponents";
-import { capitalize, decapitalize } from "../string-utils";
+import { capitalize, uncapitalize } from "../string-utils";
 import { valueToJSON } from "../value-utils";
 
 const responseIWishIHad: RuiJSONFormat = {
@@ -146,16 +147,23 @@ const getEventsFor = (
 const convertJSXtoComponent = (
   element: ts.JsxChild,
   componentMapping: Record<string, string>,
+  vcl: ComponentLibraryMetaInformation,
   properties: ts.ObjectLiteralExpression | undefined,
   events: ts.ObjectLiteralExpression | undefined,
 ): RuiVisualComponent[] => {
   if (ts.isJsxSelfClosingElement(element) && ts.isIdentifier(element.tagName)) {
     const id = element.tagName.text;
     const componentType = componentMapping[id];
+    console.log(vcl[componentType]);
+
+    const props = getPropertiesFor(properties, capitalize(id));
+    const eventHandlers = getEventsFor(events, capitalize(id));
     return [
       {
-        id: decapitalize(id),
+        id: uncapitalize(id),
         component: componentType,
+        props,
+        events: eventHandlers,
       },
     ];
   }
@@ -170,6 +178,7 @@ const convertJSXtoComponent = (
 const extractComposition = (
   component: ts.ArrowFunction,
   componentMapping: Record<string, string>,
+  vcl: ComponentLibraryMetaInformation,
   properties: ts.ObjectLiteralExpression | undefined,
   events: ts.ObjectLiteralExpression | undefined,
 ): RuiVisualComponent[] => {
@@ -181,6 +190,7 @@ const extractComposition = (
           ...convertJSXtoComponent(
             node.expression,
             componentMapping,
+            vcl,
             properties,
             events,
           ),
@@ -196,6 +206,7 @@ const extractComposition = (
           ...convertJSXtoComponent(
             node.expression.expression,
             componentMapping,
+            vcl,
             properties,
             events,
           ),
@@ -348,6 +359,7 @@ export const convertRuiToJson = async (
   const composition = extractComposition(
     component,
     componentMapping,
+    componentLibraryInfo,
     properties,
     events,
   );

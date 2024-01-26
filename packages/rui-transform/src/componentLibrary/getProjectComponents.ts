@@ -1,4 +1,5 @@
 import {
+  ChildContainers,
   ComponentLibraryMetaInformation,
   ComponentMetaInformation,
   EventInfo,
@@ -36,6 +37,36 @@ const getPropertyTypes = (
     });
   }
   return properties;
+};
+
+const getChildContainers = (
+  childContainerType: ts.TypeNode | undefined,
+  typeChecker: ts.TypeChecker,
+  printer: ts.Printer,
+  sourceFile: ts.SourceFile,
+): ChildContainers => {
+  const childContainers: ChildContainers = {};
+
+  const typeInfo = childContainerType
+    ? typeChecker.getTypeAtLocation(childContainerType)
+    : undefined;
+  if (typeInfo) {
+    typeInfo.symbol.members?.forEach((member) => {
+      if (
+        member.valueDeclaration &&
+        ts.isPropertySignature(member.valueDeclaration)
+      ) {
+        const type = member.valueDeclaration.type;
+        childContainers[`${member.escapedName}`] = {
+          type,
+          typeAsString: type
+            ? printer.printNode(ts.EmitHint.Unspecified, type, sourceFile)
+            : "unknown",
+        };
+      }
+    });
+  }
+  return childContainers;
 };
 
 const getEventTypes = (
@@ -127,7 +158,12 @@ const getComponentInfoFromDeclaration = (
         ),
         produces: getProductionType(typeArguments[3], printer, sourceFile),
         dependencies: [], // TODO
-        childContainers: {}, // TODO
+        childContainers: getChildContainers(
+          typeArguments[2],
+          typeChecker,
+          printer,
+          sourceFile,
+        ),
       };
     }
     if (typeName === "ComponentDefinition") {
