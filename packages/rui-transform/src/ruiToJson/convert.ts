@@ -144,6 +144,75 @@ const getEventsFor = (
   return undefined;
 };
 
+const extractChildrenFromAttributes = (
+  containerNames: string[],
+  attributes: ts.JsxAttributes,
+  componentMapping: Record<string, string>,
+  vcl: ComponentLibraryMetaInformation,
+  properties: ts.ObjectLiteralExpression | undefined,
+  events: ts.ObjectLiteralExpression | undefined,
+) => {
+  const result: Record<string, RuiVisualComponent[]> = {};
+
+  ts.forEachChild(attributes, (attribute) => {
+    if (
+      ts.isJsxAttribute(attribute) &&
+      ts.isIdentifier(attribute.name) &&
+      containerNames.includes(attribute.name.text) &&
+      attribute.initializer &&
+      ts.isJsxExpression(attribute.initializer) &&
+      attribute.initializer.expression &&
+      ts.isJsxChild(attribute.initializer.expression)
+    ) {
+      result[attribute.name.text] = convertJSXtoComponent(
+        attribute.initializer.expression,
+        componentMapping,
+        vcl,
+        properties,
+        events,
+      );
+    }
+  });
+
+  return result;
+};
+
+const extractChildren = (
+  componentType: string,
+  element: ts.JsxChild,
+  componentMapping: Record<string, string>,
+  vcl: ComponentLibraryMetaInformation,
+  properties: ts.ObjectLiteralExpression | undefined,
+  events: ts.ObjectLiteralExpression | undefined,
+): RuiVisualComponent["childContainers"] => {
+  const componentInfo = vcl[componentType];
+  const childContainers = Object.keys(componentInfo.childContainers);
+  if (childContainers.length === 0) {
+    return undefined;
+  }
+
+  let result: Record<string, RuiVisualComponent[]> = {};
+  if (ts.isJsxSelfClosingElement(element)) {
+    result = {
+      ...result,
+      ...extractChildrenFromAttributes(
+        childContainers,
+        element.attributes,
+        componentMapping,
+        vcl,
+        properties,
+        events,
+      ),
+    };
+  }
+
+  if (Object.keys(result).length > 0) {
+    return result;
+  }
+
+  return undefined;
+};
+
 const convertJSXtoComponent = (
   element: ts.JsxChild,
   componentMapping: Record<string, string>,
@@ -154,25 +223,44 @@ const convertJSXtoComponent = (
   if (ts.isJsxSelfClosingElement(element) && ts.isIdentifier(element.tagName)) {
     const id = element.tagName.text;
     const componentType = componentMapping[id];
-    console.log(vcl[componentType]);
 
     const props = getPropertiesFor(properties, capitalize(id));
     const eventHandlers = getEventsFor(events, capitalize(id));
+
+    const childContainers = extractChildren(
+      componentType,
+      element,
+      componentMapping,
+      vcl,
+      properties,
+      events,
+    );
+
     return [
       {
         id: uncapitalize(id),
         component: componentType,
         props,
         events: eventHandlers,
+        childContainers,
       },
     ];
   }
-  return [
-    {
-      id: "blub",
-      component: "Foo",
-    },
-  ];
+  if (ts.isJsxFragment(element)) {
+    console.log("Fragment!");
+    return element.children.flatMap((node) =>
+      convertJSXtoComponent(node, componentMapping, vcl, properties, events),
+    );
+  }
+  if (ts.isJsxText(element)) {
+    if (element.text.trim().length === 0) {
+      return [];
+    }
+    // TODO: How to deal with JSX text?
+    return [];
+  }
+
+  return [];
 };
 
 const extractComposition = (
