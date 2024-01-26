@@ -158,6 +158,25 @@ const extractChildren = (
       ),
     };
   }
+  if (ts.isJsxElement(element)) {
+    result = {
+      ...result,
+      ...extractChildrenFromAttributes(
+        childContainers,
+        element.openingElement.attributes,
+        componentMapping,
+        vcl,
+        properties,
+        events,
+      ),
+    };
+    if (element.children && childContainers.includes("children")) {
+      const children = element.children.flatMap((child) =>
+        convertJSXtoComponent(child, componentMapping, vcl, properties, events),
+      );
+      result["children"] = (result.children || []).concat(children);
+    }
+  }
 
   if (Object.keys(result).length > 0) {
     return result;
@@ -175,6 +194,35 @@ const convertJSXtoComponent = (
 ): RuiVisualComponent[] => {
   if (ts.isJsxSelfClosingElement(element) && ts.isIdentifier(element.tagName)) {
     const id = element.tagName.text;
+    const componentType = componentMapping[id];
+
+    const props = getPropertiesFor(properties, capitalize(id));
+    const eventHandlers = getEventsFor(events, capitalize(id));
+
+    const childContainers = extractChildren(
+      componentType,
+      element,
+      componentMapping,
+      vcl,
+      properties,
+      events,
+    );
+
+    return [
+      {
+        id: uncapitalize(id),
+        component: componentType,
+        props,
+        events: eventHandlers,
+        childContainers,
+      },
+    ];
+  }
+  if (
+    ts.isJsxElement(element) &&
+    ts.isIdentifier(element.openingElement.tagName)
+  ) {
+    const id = element.openingElement.tagName.text;
     const componentType = componentMapping[id];
 
     const props = getPropertiesFor(properties, capitalize(id));

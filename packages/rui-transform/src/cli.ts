@@ -43,6 +43,9 @@ export const run = (args: string[]) => {
 
       const result = await convertRuiToJson(sourceFile, resolver);
       console.log(JSON.stringify(result, undefined, 2));
+
+      const tsxResult = await convertJsonToRui(result, resolver);
+      console.log(tsxResult);
     });
 
   program.parseAsync(args);

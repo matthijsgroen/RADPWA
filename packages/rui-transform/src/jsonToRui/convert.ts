@@ -2,6 +2,7 @@ import prettier from "prettier";
 import ts, {
   ObjectLiteralElementLike,
   PropertyAssignment,
+  addSyntheticLeadingComment,
   factory as f,
 } from "typescript";
 import {
@@ -427,6 +428,9 @@ const writeCompositionTree = (
   );
 };
 
+const createCommentBlock = (lines: string[]): string =>
+  ["*", ...lines.map((l) => `* ${l}`), "*"].join("\n");
+
 export const convertJsonToRui = async (
   structure: RuiJSONFormat,
   resolve: Resolver,
@@ -451,7 +455,16 @@ export const convertJsonToRui = async (
 
   const sourceFile = f.createSourceFile(
     [
-      reactImport(),
+      addSyntheticLeadingComment(
+        reactImport(),
+        ts.SyntaxKind.MultiLineCommentTrivia,
+        createCommentBlock([
+          "This is an auto generated file. DO NOT EDIT MANUALLY.",
+          "Please use our Editor plugin to edit this file.",
+          "For more information about Rapid UI, see: ....",
+        ]),
+        true,
+      ),
       helpersImport(),
       componentsImport(structure.componentLibrary),
       eventHandlersImport(structure.eventHandlers),
