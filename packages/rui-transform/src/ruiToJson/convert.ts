@@ -10,64 +10,6 @@ import { getProjectComponents } from "../componentLibrary/getProjectComponents";
 import { capitalize, uncapitalize } from "../string-utils";
 import { valueToJSON } from "../value-utils";
 
-const responseIWishIHad: RuiJSONFormat = {
-  componentLibrary: "../rapid-components",
-  eventHandlers: "./ExperimentScreen.events",
-
-  id: "MainScreen",
-
-  components: [
-    {
-      id: "user",
-      component: "ComponentState",
-      props: {
-        initialValue: "Hello World",
-      },
-    },
-  ],
-
-  composition: [
-    {
-      id: "panel1",
-      component: "Panel",
-      props: {
-        header: "Hello",
-      },
-      childContainers: {
-        children: [
-          {
-            id: "text1",
-            component: "Text",
-            props: {
-              content: "Hello world",
-            },
-          },
-          {
-            id: "button1",
-            component: "Button",
-            props: {
-              caption: "Press me",
-            },
-            events: {
-              onClick: "demoButtonClick",
-            },
-          },
-          {
-            id: "button2",
-            component: "Button",
-            props: {
-              caption: "Disable other",
-            },
-            events: {
-              onClick: "button2click",
-            },
-          },
-        ],
-      },
-    },
-  ],
-};
-
 const getPropertiesFor = (
   properties: ts.ObjectLiteralExpression | undefined,
   id: string,
