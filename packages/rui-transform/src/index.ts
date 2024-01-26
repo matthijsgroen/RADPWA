@@ -6,6 +6,8 @@ export type {
   ComponentLibrary,
 } from "./component-types";
 
+export { exposePropsAsState } from "./state/exposePropsAsState";
+
 export type {
   RuiJSONFormat,
   RuiDataComponent,
