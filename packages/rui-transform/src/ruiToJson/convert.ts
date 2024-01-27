@@ -46,6 +46,22 @@ const getPropertiesFor = (
   return undefined;
 };
 
+const getPropertiesAsStateFor = (
+  propertiesAsState: ts.TypeLiteralNode | undefined,
+  id: string,
+): string[] | undefined => {
+  const idProps = propertiesAsState?.members.find(
+    (m): m is ts.PropertySignature =>
+      ts.isPropertySignature(m) && m.name.getText() === id,
+  );
+  if (idProps && idProps.type && ts.isTypeLiteralNode(idProps.type)) {
+    return idProps.type.members
+      .filter(ts.isPropertySignature)
+      .map((m) => m.name.getText());
+  }
+  return undefined;
+};
+
 const getEventsFor = (
   events: ts.ObjectLiteralExpression | undefined,
   id: string,
@@ -102,6 +118,7 @@ const extractChildrenFromAttributes = (
   vcl: ComponentLibraryMetaInformation,
   properties: ts.ObjectLiteralExpression | undefined,
   events: ts.ObjectLiteralExpression | undefined,
+  propertiesAsState: ts.TypeLiteralNode | undefined,
 ) => {
   const result: Record<string, RuiVisualComponent[]> = {};
 
@@ -121,6 +138,7 @@ const extractChildrenFromAttributes = (
         vcl,
         properties,
         events,
+        propertiesAsState,
       );
     }
   });
@@ -135,6 +153,7 @@ const extractChildren = (
   vcl: ComponentLibraryMetaInformation,
   properties: ts.ObjectLiteralExpression | undefined,
   events: ts.ObjectLiteralExpression | undefined,
+  propertiesAsState: ts.TypeLiteralNode | undefined,
 ): RuiVisualComponent["childContainers"] => {
   const componentInfo = vcl[componentType];
   const childContainers = Object.keys(componentInfo.childContainers);
@@ -153,6 +172,7 @@ const extractChildren = (
         vcl,
         properties,
         events,
+        propertiesAsState,
       ),
     };
   }
@@ -166,11 +186,19 @@ const extractChildren = (
         vcl,
         properties,
         events,
+        propertiesAsState,
       ),
     };
     if (element.children && childContainers.includes("children")) {
       const children = element.children.flatMap((child) =>
-        convertJSXtoComponent(child, componentMapping, vcl, properties, events),
+        convertJSXtoComponent(
+          child,
+          componentMapping,
+          vcl,
+          properties,
+          events,
+          propertiesAsState,
+        ),
       );
       result["children"] = (result.children || []).concat(children);
     }
@@ -189,13 +217,14 @@ const convertJSXtoComponent = (
   vcl: ComponentLibraryMetaInformation,
   properties: ts.ObjectLiteralExpression | undefined,
   events: ts.ObjectLiteralExpression | undefined,
+  propertiesAsState: ts.TypeLiteralNode | undefined,
 ): RuiVisualComponent[] => {
   if (ts.isJsxSelfClosingElement(element) && ts.isIdentifier(element.tagName)) {
-    const id = element.tagName.text;
-    const componentType = componentMapping[id];
+    const tagName = element.tagName.text;
+    const componentType = componentMapping[tagName];
 
-    const props = getPropertiesFor(properties, capitalize(id));
-    const eventHandlers = getEventsFor(events, capitalize(id));
+    const props = getPropertiesFor(properties, capitalize(tagName));
+    const eventHandlers = getEventsFor(events, capitalize(tagName));
 
     const childContainers = extractChildren(
       componentType,
@@ -204,12 +233,16 @@ const convertJSXtoComponent = (
       vcl,
       properties,
       events,
+      propertiesAsState,
     );
+    const id = uncapitalize(tagName);
+    const propsAsState = getPropertiesAsStateFor(propertiesAsState, id);
 
     return [
       {
-        id: uncapitalize(id),
+        id,
         component: componentType,
+        propsAsState,
         props,
         events: eventHandlers,
         childContainers,
@@ -233,6 +266,7 @@ const convertJSXtoComponent = (
       vcl,
       properties,
       events,
+      propertiesAsState,
     );
 
     return [
@@ -247,7 +281,14 @@ const convertJSXtoComponent = (
   }
   if (ts.isJsxFragment(element)) {
     return element.children.flatMap((node) =>
-      convertJSXtoComponent(node, componentMapping, vcl, properties, events),
+      convertJSXtoComponent(
+        node,
+        componentMapping,
+        vcl,
+        properties,
+        events,
+        propertiesAsState,
+      ),
     );
   }
   if (ts.isJsxText(element)) {
@@ -267,6 +308,7 @@ const extractComposition = (
   vcl: ComponentLibraryMetaInformation,
   properties: ts.ObjectLiteralExpression | undefined,
   events: ts.ObjectLiteralExpression | undefined,
+  propertiesAsState: ts.TypeLiteralNode | undefined,
 ): RuiVisualComponent[] => {
   const result: RuiVisualComponent[] = [];
   ts.forEachChild(component.body, (node) => {
@@ -279,6 +321,7 @@ const extractComposition = (
             vcl,
             properties,
             events,
+            propertiesAsState,
           ),
         );
       }
@@ -295,6 +338,7 @@ const extractComposition = (
             vcl,
             properties,
             events,
+            propertiesAsState,
           ),
         );
       }
@@ -319,12 +363,13 @@ export const convertRuiToJson = async (
     };
   }
 
-  let componentLibrary = "";
-  let componentImport = undefined as ts.Identifier | undefined;
-  let eventHandlers = "";
-  let id = "";
   // https://stackoverflow.com/questions/61597612/how-to-properly-handle-let-variables-with-callbacks-in-typescript
   let component = undefined as ts.ArrowFunction | undefined;
+  let componentImport = undefined as ts.Identifier | undefined;
+  let propertiesAsState = undefined as ts.TypeLiteralNode | undefined;
+  let componentLibrary = "";
+  let eventHandlers = "";
+  let id = "";
 
   ts.forEachChild(sourceFile, (node) => {
     if (
@@ -362,6 +407,20 @@ export const convertRuiToJson = async (
         ts.isArrowFunction(varDeclaration.initializer)
       ) {
         component = varDeclaration.initializer;
+      }
+    }
+    if (
+      ts.isTypeAliasDeclaration(node) &&
+      node.modifiers?.[0]?.kind === ts.SyntaxKind.ExportKeyword &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === "Scope"
+    ) {
+      if (
+        ts.isIntersectionTypeNode(node.type) &&
+        node.type.types[1] &&
+        ts.isTypeLiteralNode(node.type.types[1])
+      ) {
+        propertiesAsState = node.type.types[1];
       }
     }
   });
@@ -456,6 +515,7 @@ export const convertRuiToJson = async (
     vcl,
     properties,
     events,
+    propertiesAsState,
   );
 
   return {
