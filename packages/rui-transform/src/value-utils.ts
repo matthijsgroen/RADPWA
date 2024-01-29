@@ -4,11 +4,17 @@ export const convertValue = (v: unknown) => {
   if (typeof v === "string") {
     return f.createStringLiteral(v);
   }
+  if (v === false) {
+    return f.createFalse();
+  }
+  if (v === true) {
+    return f.createTrue();
+  }
 
   return f.createStringLiteral("Not yet supported");
 };
 
-type JSON = null | string | number | JSON[] | Record<string, any>;
+type JSON = null | string | number | boolean | JSON[] | Record<string, any>;
 
 export const valueToJSON = (node: ts.Node): JSON => {
   if (ts.isObjectLiteralExpression(node)) {
@@ -28,6 +34,12 @@ export const valueToJSON = (node: ts.Node): JSON => {
   }
   if (ts.isNumericLiteral(node)) {
     return parseFloat(node.text);
+  }
+  if (node.kind === ts.SyntaxKind.TrueKeyword) {
+    return true;
+  }
+  if (node.kind === ts.SyntaxKind.FalseKeyword) {
+    return false;
   }
   return null;
 };
