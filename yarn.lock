@@ -1553,6 +1553,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/react-dom@npm:^18.2.18":
+  version: 18.2.18
+  resolution: "@types/react-dom@npm:18.2.18"
+  dependencies:
+    "@types/react": "npm:*"
+  checksum: 74dba11a1b8156f3a763f3fca1fb4ec1dcd349153279b8bf79210024a69f994bf2cf0728198c047f8130c5318420ea56281b0a4ef84c8ae943cd9a0cac705220
+  languageName: node
+  linkType: hard
+
 "@types/react-transition-group@npm:^4.4.1":
   version: 4.4.10
   resolution: "@types/react-transition-group@npm:4.4.10"
@@ -4773,6 +4782,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"prelude-ls@npm:^1.2.1":
+  version: 1.2.1
+  resolution: "prelude-ls@npm:1.2.1"
+  checksum: b00d617431e7886c520a6f498a2e14c75ec58f6d93ba48c3b639cf241b54232d90daa05d83a9e9b9fef6baa63cb7e1e4602c2372fea5bc169668401eb127d0cd
+  languageName: node
+  linkType: hard
+
 "prettier@npm:^3.2.2, prettier@npm:^3.2.4":
   version: 3.2.4
   resolution: "prettier@npm:3.2.4"
@@ -4872,22 +4888,6 @@ __metadata:
   checksum: 900a93d3cdae3acd7d16f642c29a642aea32c2026446151f0778c62ac089d4b8e6c986811076e1ae180a694cedf077d453a11b58ff0a865629a4f82ab558e102
   languageName: node
   linkType: hard
-
-"rad-generator@workspace:packages/vscode-rui-editor":
-  version: 0.0.0-use.local
-  resolution: "rad-generator@workspace:packages/vscode-rui-editor"
-  dependencies:
-    "@types/mocha": "npm:^10.0.6"
-    "@types/node": "npm:18.x"
-    "@types/vscode": "npm:^1.85.0"
-    "@typescript-eslint/eslint-plugin": "npm:^6.15.0"
-    "@typescript-eslint/parser": "npm:^6.15.0"
-    "@vscode/test-cli": "npm:^0.0.4"
-    "@vscode/test-electron": "npm:^2.3.8"
-    eslint: "npm:^8.56.0"
-    typescript: "npm:^5.3.3"
-  languageName: unknown
-  linkType: soft
 
 "randombytes@npm:^2.1.0":
   version: 2.1.0
@@ -5373,6 +5373,7 @@ __metadata:
     "@rui/prime-react": "workspace:^"
     "@rui/react-compiler": "workspace:^"
     "@rui/transform": "workspace:^"
+    "@types/react-dom": "npm:^18.2.18"
     highlight.js: "npm:^11.9.0"
     parcel: "npm:^2.11.0"
     postcss: "npm:^8.4.33"
@@ -5721,6 +5722,22 @@ __metadata:
   checksum: 79a6f7ea0cdd4fcafcec8c6e68e1e0cfa657e414b6f1696552d89ae70a3634b12ac6c16b7a0a3bfdb0a222ebc3d9a7649f2de434a78f2d65d318b50f314a85e4
   languageName: node
   linkType: hard
+
+"vscode-rui-editor@workspace:packages/vscode-rui-editor":
+  version: 0.0.0-use.local
+  resolution: "vscode-rui-editor@workspace:packages/vscode-rui-editor"
+  dependencies:
+    "@types/mocha": "npm:^10.0.6"
+    "@types/node": "npm:18.x"
+    "@types/vscode": "npm:^1.85.0"
+    "@typescript-eslint/eslint-plugin": "npm:^6.15.0"
+    "@typescript-eslint/parser": "npm:^6.15.0"
+    "@vscode/test-cli": "npm:^0.0.4"
+    "@vscode/test-electron": "npm:^2.3.8"
+    eslint: "npm:^8.56.0"
+    typescript: "npm:^5.3.3"
+  languageName: unknown
+  linkType: soft
 
 "weak-lru-cache@npm:^1.2.2":
   version: 1.2.2

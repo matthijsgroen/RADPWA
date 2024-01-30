@@ -6,6 +6,15 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
 
   private static readonly viewType = "ruiCustoms.ruiEditor";
 
+  public static register(context: vscode.ExtensionContext): vscode.Disposable {
+    const provider = new RuiEditorProvider(context);
+    const providerRegistration = vscode.window.registerCustomEditorProvider(
+      RuiEditorProvider.viewType,
+      provider,
+    );
+    return providerRegistration;
+  }
+
   resolveCustomTextEditor(
     document: vscode.TextDocument,
     webviewPanel: vscode.WebviewPanel,
@@ -19,45 +28,29 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
     };
     webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview);
 
-    function updateWebview() {
-      webviewPanel.webview.postMessage({
-        type: "update",
-        text: document.getText(),
-      });
-    }
-
-    const changeDocumentSubscription = vscode.workspace.onDidChangeTextDocument(
-      (e) => {
-        if (e.document.uri.toString() === document.uri.toString()) {
-          updateWebview();
-        }
-      },
-    );
+    // Receive message from the webview.
+    webviewPanel.webview.onDidReceiveMessage((message) => {
+      switch (message.type) {
+        case "edit":
+          const receivedData = message.data;
+          console.log("** Received updated JSON from the webview **");
+          this.editDocument(document, receivedData);
+          return;
+      }
+    });
 
     // Make sure we get rid of the listener when our editor is closed.
     webviewPanel.onDidDispose(() => {
       changeDocumentSubscription.dispose();
     });
 
-    // Receive message from the webview.
-    webviewPanel.webview.onDidReceiveMessage((e) => {
-      switch (e.type) {
-        case "edit":
-          this.editDocument(document);
-          return;
-      }
-    });
-
-    updateWebview();
-  }
-
-  public static register(context: vscode.ExtensionContext): vscode.Disposable {
-    const provider = new RuiEditorProvider(context);
-    const providerRegistration = vscode.window.registerCustomEditorProvider(
-      RuiEditorProvider.viewType,
-      provider,
+    const changeDocumentSubscription = vscode.workspace.onDidChangeTextDocument(
+      (e) => {
+        if (e.document.uri.toString() === document.uri.toString()) {
+          this.getHtmlForWebview(webviewPanel.webview);
+        }
+      },
     );
-    return providerRegistration;
   }
 
   private getHtmlForWebview(webview: vscode.Webview): string {
@@ -103,30 +96,10 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
 			</html>`;
   }
 
-  private editDocument(document: vscode.TextDocument) {
-    const json = this.getDocumentAsJson(document);
-    json.id = getNonce();
-
-    return this.updateTextDocument(document, json);
-  }
-
-  private getDocumentAsJson(document: vscode.TextDocument): any {
-    const text = document.getText();
-    if (text.trim().length === 0) {
-      return {};
-    }
-
-    try {
-      return JSON.parse(text);
-    } catch {
-      throw new Error(
-        "Could not get document as json. Content is not valid json",
-      );
-    }
-  }
-
-  private updateTextDocument(document: vscode.TextDocument, json: any) {
+  private editDocument(document: vscode.TextDocument, json: any) {
     const edit = new vscode.WorkspaceEdit();
+
+    console.log("** Replacing document **");
 
     // Replace the entire document every time for this example.
     edit.replace(
@@ -134,6 +107,8 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
       new vscode.Range(0, 0, document.lineCount, 0),
       JSON.stringify(json, null, 2),
     );
+
+    console.log("** Updated succesfully **");
 
     return vscode.workspace.applyEdit(edit);
   }
