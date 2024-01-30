@@ -4,14 +4,12 @@ import { ComponentTreeNode } from "~src/components/ComponentTreeView";
 // Both the component props and events are processed in the same way but kept as
 // separate functions for future changes to the events and props model
 export const processComponentProps = (
-  attributes: Record<string, any>[] | undefined,
+  attributes: Record<string, any> | Record<string, any>[] | undefined,
 ) => {
-  if (!Array.isArray(attributes) || attributes.length === 0) {
-    return [];
-  }
+  if (!attributes) return [];
 
-  if (attributes.length === 1) {
-    const [name, value] = Object.entries(attributes[0])[0];
+  if (!Array.isArray(attributes)) {
+    const [name, value] = Object.entries(attributes)[0];
     return [
       {
         name,
@@ -32,14 +30,12 @@ export const processComponentProps = (
 };
 
 export const processComponentEvents = (
-  attributes: Record<string, any>[] | undefined,
+  attributes: Record<string, any> | Record<string, any>[] | undefined,
 ) => {
-  if (!Array.isArray(attributes) || attributes.length === 0) {
-    return [];
-  }
+  if (!attributes) return [];
 
-  if (attributes.length === 1) {
-    const [name, value] = Object.entries(attributes[0])[0];
+  if (!Array.isArray(attributes)) {
+    const [name, value] = Object.entries(attributes)[0];
     return [
       {
         name,

@@ -17,11 +17,9 @@
     {
       "id": "panel1",
       "component": "Panel",
-      "props": [
-        {
-          "header": "Hello"
-        }
-      ],
+      "props": {
+        "header": "Hello"
+      },
       "childContainers": {
         "children": [
           {
@@ -39,30 +37,22 @@
           {
             "id": "button1",
             "component": "Button",
-            "props": [
-              {
-                "caption": "Press me"
-              }
-            ],
-            "events": [
-              {
-                "onClick": "demoButtonClick"
-              }
-            ]
+            "props": {
+              "caption": "Press me"
+            },
+            "events": {
+              "onClick": "demoButtonClick"
+            }
           },
           {
             "id": "button2",
             "component": "Button",
-            "props": [
-              {
-                "caption": "Disable other"
-              }
-            ],
-            "events": [
-              {
-                "onClick": "button2click"
-              }
-            ]
+            "props": {
+              "caption": "Disable other"
+            },
+            "events": {
+              "onClick": "button2click"
+            }
           }
         ]
       }
