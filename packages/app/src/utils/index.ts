@@ -1,5 +1,3 @@
-// Separated the function to process the component props and events apart from
-
 import { RuiVisualComponent } from "@rui/transform";
 import { ComponentTreeNode } from "~src/components/ComponentTreeView";
 
