@@ -46,22 +46,6 @@ const getPropertiesFor = (
   return undefined;
 };
 
-const getPropertiesAsStateFor = (
-  propertiesAsState: ts.TypeLiteralNode | undefined,
-  id: string,
-): string[] | undefined => {
-  const idProps = propertiesAsState?.members.find(
-    (m): m is ts.PropertySignature =>
-      ts.isPropertySignature(m) && m.name.getText() === id,
-  );
-  if (idProps && idProps.type && ts.isTypeLiteralNode(idProps.type)) {
-    return idProps.type.members
-      .filter(ts.isPropertySignature)
-      .map((m) => m.name.getText());
-  }
-  return undefined;
-};
-
 const getEventsFor = (
   events: ts.ObjectLiteralExpression | undefined,
   id: string,
@@ -118,7 +102,7 @@ const extractChildrenFromAttributes = (
   vcl: ComponentLibraryMetaInformation,
   properties: ts.ObjectLiteralExpression | undefined,
   events: ts.ObjectLiteralExpression | undefined,
-  propertiesAsState: ts.TypeLiteralNode | undefined,
+  propertiesAsState: Record<string, string[]>,
 ) => {
   const result: Record<string, RuiVisualComponent[]> = {};
 
@@ -153,7 +137,7 @@ const extractChildren = (
   vcl: ComponentLibraryMetaInformation,
   properties: ts.ObjectLiteralExpression | undefined,
   events: ts.ObjectLiteralExpression | undefined,
-  propertiesAsState: ts.TypeLiteralNode | undefined,
+  propertiesAsState: Record<string, string[]>,
 ): RuiVisualComponent["childContainers"] => {
   const componentInfo = vcl[componentType];
   const childContainers = Object.keys(componentInfo.childContainers);
@@ -217,7 +201,7 @@ const convertJSXtoComponent = (
   vcl: ComponentLibraryMetaInformation,
   properties: ts.ObjectLiteralExpression | undefined,
   events: ts.ObjectLiteralExpression | undefined,
-  propertiesAsState: ts.TypeLiteralNode | undefined,
+  propertiesAsState: Record<string, string[]>,
 ): RuiVisualComponent[] => {
   if (ts.isJsxSelfClosingElement(element) && ts.isIdentifier(element.tagName)) {
     const tagName = element.tagName.text;
@@ -236,7 +220,7 @@ const convertJSXtoComponent = (
       propertiesAsState,
     );
     const id = uncapitalize(tagName);
-    const propsAsState = getPropertiesAsStateFor(propertiesAsState, id);
+    const propsAsState = propertiesAsState[id]; //getPropertiesAsStateFor(propertiesAsState, id);
 
     return [
       {
@@ -308,7 +292,7 @@ const extractComposition = (
   vcl: ComponentLibraryMetaInformation,
   properties: ts.ObjectLiteralExpression | undefined,
   events: ts.ObjectLiteralExpression | undefined,
-  propertiesAsState: ts.TypeLiteralNode | undefined,
+  propertiesAsState: Record<string, string[]>,
 ): RuiVisualComponent[] => {
   const result: RuiVisualComponent[] = [];
   ts.forEachChild(component.body, (node) => {
@@ -366,7 +350,7 @@ export const convertRuiToJson = async (
   // https://stackoverflow.com/questions/61597612/how-to-properly-handle-let-variables-with-callbacks-in-typescript
   let component = undefined as ts.ArrowFunction | undefined;
   let componentImport = undefined as ts.Identifier | undefined;
-  let propertiesAsState = undefined as ts.TypeLiteralNode | undefined;
+  let propertiesAsState: Record<string, string[]> = {};
   let componentLibrary = "";
   let eventHandlers = "";
   let id = "";
@@ -407,20 +391,6 @@ export const convertRuiToJson = async (
         ts.isArrowFunction(varDeclaration.initializer)
       ) {
         component = varDeclaration.initializer;
-      }
-    }
-    if (
-      ts.isTypeAliasDeclaration(node) &&
-      node.modifiers?.[0]?.kind === ts.SyntaxKind.ExportKeyword &&
-      ts.isIdentifier(node.name) &&
-      node.name.text === "Scope"
-    ) {
-      if (
-        ts.isIntersectionTypeNode(node.type) &&
-        node.type.types[1] &&
-        ts.isTypeLiteralNode(node.type.types[1])
-      ) {
-        propertiesAsState = node.type.types[1];
       }
     }
   });
@@ -477,32 +447,64 @@ export const convertRuiToJson = async (
 
   const components: RuiDataComponent[] = [];
   if (scope) {
-    // detect 'data components'
+    const extractDataComponent = (
+      id: string,
+      node: ts.Node,
+    ): RuiDataComponent | undefined => {
+      if (
+        ts.isCallExpression(node) &&
+        ts.isPropertyAccessExpression(node.expression) &&
+        ts.isPropertyAccessExpression(node.expression.expression) &&
+        ts.isIdentifier(node.expression.expression.name)
+      ) {
+        const propertyAccess = node.expression.expression;
+        const componentName = propertyAccess.name.text;
+
+        const componentInfo = vcl[componentName];
+        if (componentInfo && componentInfo.isVisual === false) {
+          const props = getPropertiesFor(properties, capitalize(id));
+          const eventHandlers = getEventsFor(events, capitalize(id));
+
+          return {
+            id,
+            component: componentName,
+            props,
+            events: eventHandlers,
+          };
+        }
+      }
+    };
+
+    // detect 'data components' & props and state
     ts.forEachChild(scope, (node) => {
       if (ts.isPropertyAssignment(node) && ts.isIdentifier(node.name)) {
         const id = node.name.text;
+        const component = extractDataComponent(id, node.initializer);
+        if (component) {
+          components.push(component);
+        }
         if (
           ts.isCallExpression(node.initializer) &&
-          ts.isPropertyAccessExpression(node.initializer.expression) &&
-          ts.isPropertyAccessExpression(
-            node.initializer.expression.expression,
-          ) &&
-          ts.isIdentifier(node.initializer.expression.expression.name)
+          ts.isIdentifier(node.initializer.expression) &&
+          node.initializer.expression.text === "exposePropsAsState"
         ) {
-          const propertyAccess = node.initializer.expression.expression;
-          const componentName = propertyAccess.name.text;
+          const source = node.initializer.arguments[0];
+          const component = extractDataComponent(id, source);
 
-          const componentInfo = vcl[componentName];
-          if (componentInfo && componentInfo.isVisual === false) {
-            const props = getPropertiesFor(properties, capitalize(id));
-            const eventHandlers = getEventsFor(events, capitalize(id));
-
+          const stateProps = node.initializer.arguments
+            .map((v, i) => {
+              if (i > 1 && ts.isStringLiteral(v)) {
+                return v.text;
+              }
+            })
+            .filter((prop): prop is string => prop !== undefined);
+          if (component) {
             components.push({
-              id,
-              component: componentName,
-              props,
-              events: eventHandlers,
+              ...component,
+              propsAsState: stateProps,
             });
+          } else {
+            propertiesAsState[id] = stateProps;
           }
         }
       }
