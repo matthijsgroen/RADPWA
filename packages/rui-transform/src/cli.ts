@@ -32,8 +32,11 @@ export const run = (args: string[]) => {
         program,
         "./rapid-components.tsx",
       );
-      const result = await convertRuiToJson(program, filePath, vcl);
-      console.log(JSON.stringify(result, undefined, 2));
+      const jsonResult = await convertRuiToJson(program, filePath, vcl);
+      console.log(JSON.stringify(jsonResult, undefined, 2));
+
+      const tsxResult = await convertJsonToRui(jsonResult, vcl);
+      console.log(tsxResult);
     });
 
   program
@@ -55,10 +58,10 @@ export const run = (args: string[]) => {
         "./rapid-components.tsx",
       );
       const jsonContent = await readFile(filePath, "utf-8");
-      const jsonStructure = JSON.parse(jsonContent);
+      const jsonResult = JSON.parse(jsonContent);
 
-      const result = await convertJsonToRui(jsonStructure, vcl);
-      console.log(result);
+      const tsxResult = await convertJsonToRui(jsonResult, vcl);
+      console.log(tsxResult);
     });
 
   program.parseAsync(args);

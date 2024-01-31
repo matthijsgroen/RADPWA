@@ -286,6 +286,46 @@ const convertJSXtoComponent = (
   return [];
 };
 
+const extractChildContainers = (
+  node: ts.Expression,
+  vcl: ComponentLibraryMetaInformation,
+  properties: ts.ObjectLiteralExpression | undefined,
+  events: ts.ObjectLiteralExpression | undefined,
+  propertiesAsState: Record<string, string[]>,
+): Record<string, RuiDataComponent[]> => {
+  const result: Record<string, RuiDataComponent[]> = {};
+  if (ts.isObjectLiteralExpression(node)) {
+    node.properties.forEach((e) => {
+      if (
+        ts.isPropertyAssignment(e) &&
+        ts.isIdentifier(e.name) &&
+        ts.isObjectLiteralExpression(e.initializer)
+      ) {
+        const childList: RuiDataComponent[] = [];
+        e.initializer.properties.forEach((pr) => {
+          if (ts.isPropertyAssignment(pr) && ts.isIdentifier(pr.name)) {
+            const childId = pr.name.text;
+            const childComponent = extractDataComponent(
+              childId,
+              pr.initializer,
+              vcl,
+              properties,
+              events,
+              propertiesAsState,
+            );
+            if (childComponent) {
+              childList.push(childComponent);
+            }
+          }
+        });
+
+        result[e.name.text] = childList;
+      }
+    });
+  }
+  return result;
+};
+
 const extractComposition = (
   component: ts.ArrowFunction,
   componentMapping: Record<string, string>,
@@ -329,6 +369,98 @@ const extractComposition = (
     }
   });
   return result;
+};
+
+const extractDataComponent = (
+  id: string,
+  node: ts.Node,
+  vcl: ComponentLibraryMetaInformation,
+  properties: ts.ObjectLiteralExpression | undefined,
+  events: ts.ObjectLiteralExpression | undefined,
+  propertiesAsState: Record<string, string[]>,
+): RuiDataComponent | undefined => {
+  if (
+    ts.isCallExpression(node) &&
+    ts.isPropertyAccessExpression(node.expression) &&
+    ts.isPropertyAccessExpression(node.expression.expression) &&
+    ts.isIdentifier(node.expression.expression.name)
+  ) {
+    const propertyAccess = node.expression.expression;
+    const componentName = propertyAccess.name.text;
+
+    const componentInfo = vcl[componentName];
+    if (componentInfo && componentInfo.isVisual === false) {
+      const props = getPropertiesFor(properties, capitalize(id));
+      const eventHandlers = getEventsFor(events, capitalize(id));
+
+      return {
+        id,
+        component: componentName,
+        props,
+        events: eventHandlers,
+      };
+    }
+  }
+  if (
+    ts.isCallExpression(node) &&
+    ts.isIdentifier(node.expression) &&
+    node.expression.text === "exposePropsAsState"
+  ) {
+    const source = node.arguments[0];
+    const component = extractDataComponent(
+      id,
+      source,
+      vcl,
+      properties,
+      events,
+      propertiesAsState,
+    );
+
+    const stateProps = node.arguments
+      .map((v, i) => {
+        if (i > 1 && ts.isStringLiteral(v)) {
+          return v.text;
+        }
+      })
+      .filter((prop): prop is string => prop !== undefined);
+    if (component) {
+      return {
+        ...component,
+        propsAsState: stateProps,
+      };
+    } else {
+      propertiesAsState[id] = stateProps;
+    }
+  }
+  if (
+    ts.isCallExpression(node) &&
+    ts.isIdentifier(node.expression) &&
+    node.expression.text === "composeDataChildren"
+  ) {
+    const source = node.arguments[0];
+    const component = extractDataComponent(
+      id,
+      source,
+      vcl,
+      properties,
+      events,
+      propertiesAsState,
+    );
+
+    const childContainers = extractChildContainers(
+      node.arguments[1],
+      vcl,
+      properties,
+      events,
+      propertiesAsState,
+    );
+    if (component) {
+      return {
+        ...component,
+        childContainers,
+      };
+    }
+  }
 };
 
 export const convertRuiToJson = async (
@@ -447,65 +579,20 @@ export const convertRuiToJson = async (
 
   const components: RuiDataComponent[] = [];
   if (scope) {
-    const extractDataComponent = (
-      id: string,
-      node: ts.Node,
-    ): RuiDataComponent | undefined => {
-      if (
-        ts.isCallExpression(node) &&
-        ts.isPropertyAccessExpression(node.expression) &&
-        ts.isPropertyAccessExpression(node.expression.expression) &&
-        ts.isIdentifier(node.expression.expression.name)
-      ) {
-        const propertyAccess = node.expression.expression;
-        const componentName = propertyAccess.name.text;
-
-        const componentInfo = vcl[componentName];
-        if (componentInfo && componentInfo.isVisual === false) {
-          const props = getPropertiesFor(properties, capitalize(id));
-          const eventHandlers = getEventsFor(events, capitalize(id));
-
-          return {
-            id,
-            component: componentName,
-            props,
-            events: eventHandlers,
-          };
-        }
-      }
-    };
-
     // detect 'data components' & props and state
     ts.forEachChild(scope, (node) => {
       if (ts.isPropertyAssignment(node) && ts.isIdentifier(node.name)) {
         const id = node.name.text;
-        const component = extractDataComponent(id, node.initializer);
+        const component = extractDataComponent(
+          id,
+          node.initializer,
+          vcl,
+          properties,
+          events,
+          propertiesAsState,
+        );
         if (component) {
           components.push(component);
-        }
-        if (
-          ts.isCallExpression(node.initializer) &&
-          ts.isIdentifier(node.initializer.expression) &&
-          node.initializer.expression.text === "exposePropsAsState"
-        ) {
-          const source = node.initializer.arguments[0];
-          const component = extractDataComponent(id, source);
-
-          const stateProps = node.initializer.arguments
-            .map((v, i) => {
-              if (i > 1 && ts.isStringLiteral(v)) {
-                return v.text;
-              }
-            })
-            .filter((prop): prop is string => prop !== undefined);
-          if (component) {
-            components.push({
-              ...component,
-              propsAsState: stateProps,
-            });
-          } else {
-            propertiesAsState[id] = stateProps;
-          }
         }
       }
     });
