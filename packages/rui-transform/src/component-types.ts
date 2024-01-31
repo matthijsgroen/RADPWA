@@ -4,11 +4,17 @@ export type ComponentDefinition<
   TProps = {},
   TEvents = {},
   TProduceResult = void,
-> = { description?: string } & void extends TProduceResult
+  TChildren = {},
+> = {
+  description?: string;
+} & (void extends TProduceResult
   ? {}
   : {
       produce: (props: Partial<TProps & TEvents>) => TProduceResult;
-    };
+    }) & {
+    //https://github.com/microsoft/TypeScript/issues/31940#issuecomment-839659248
+    __RuiComponentBrand?: undefined;
+  };
 
 export type VisualComponentDefinition<
   TProps = {},
@@ -20,6 +26,9 @@ export type VisualComponentDefinition<
    * Visual Component
    */
   vc: (props: Partial<TProps & TEvents & TChildren>) => ReactNode;
+} & {
+  //https://github.com/microsoft/TypeScript/issues/31940#issuecomment-839659248
+  __RuiVisualComponentBrand?: undefined;
 };
 
 export type ComponentLibrary = Record<
@@ -27,22 +36,29 @@ export type ComponentLibrary = Record<
   ComponentDefinition | VisualComponentDefinition
 >;
 
+type FilterEvents<TProps> =
+  TProps extends Record<string, unknown>
+    ? {
+        [Key in keyof TProps]: Key extends `on${string}` ? Key : never;
+      }[keyof TProps]
+    : never;
+
 export type PropertiesOf<
   TComponent extends VisualComponentDefinition | ComponentDefinition,
-> = Partial<
-  TComponent extends ComponentDefinition<infer TProps>
-    ? TProps
-    : TComponent extends VisualComponentDefinition<infer TProps>
-      ? TProps
-      : never
->;
+> = TComponent extends { vc: (args: infer TArgs) => any }
+  ? Required<Omit<TArgs, FilterEvents<TArgs>>>
+  : TComponent extends { produce: (args: infer TArgs) => any }
+    ? Required<Omit<TArgs, FilterEvents<TArgs>>>
+    : never;
 
 export type EventsOf<
   TComponent extends VisualComponentDefinition | ComponentDefinition,
-> = Partial<
-  TComponent extends ComponentDefinition<{}, infer TEvents>
-    ? TEvents
-    : TComponent extends VisualComponentDefinition<{}, infer TEvents>
-      ? TEvents
-      : never
->;
+> = TComponent extends { vc: (args: infer TArgs) => any }
+  ? Required<Pick<TArgs, FilterEvents<TArgs>>>
+  : TComponent extends { produce: (args: infer TArgs) => any }
+    ? Required<Pick<TArgs, FilterEvents<TArgs>>>
+    : never;
+
+export type ComponentProductRef<TComponentProduct> = TComponentProduct & {
+  __ComponentRef?: any;
+};

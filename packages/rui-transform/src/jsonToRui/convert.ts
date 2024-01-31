@@ -1,15 +1,19 @@
 import prettier from "prettier";
-import ts, { factory as f } from "typescript";
+import ts, {
+  ObjectLiteralElementLike,
+  addSyntheticLeadingComment,
+  factory as f,
+} from "typescript";
 import {
+  ComponentLibraryMetaInformation,
   ComponentMetaInformation,
-  Resolver,
   RuiDataComponent,
   RuiJSONFormat,
   RuiVisualComponent,
 } from "../compiler-types";
-import { getProjectComponents } from "../componentLibrary/getProjectComponents";
 import { capitalize } from "../string-utils";
 import { convertValue } from "../value-utils";
+import { isVisualComponent } from "../type-utils";
 
 const getFlatComponentList = (
   structure: RuiJSONFormat,
@@ -40,15 +44,28 @@ const helpersImport = () =>
   f.createImportDeclaration(
     undefined,
     f.createImportClause(
-      true,
+      false,
       undefined,
-      f.createNamedImports(
-        ["PropertiesOf", "EventsOf"].map<ts.ImportSpecifier>((name) =>
-          f.createImportSpecifier(false, undefined, f.createIdentifier(name)),
+      f.createNamedImports([
+        f.createImportSpecifier(
+          true,
+          undefined,
+          f.createIdentifier("EventsOf"),
         ),
-      ),
+        f.createImportSpecifier(
+          true,
+          undefined,
+          f.createIdentifier("PropertiesOf"),
+        ),
+        f.createImportSpecifier(
+          false,
+          undefined,
+          f.createIdentifier("exposePropsAsState"),
+        ),
+      ]),
     ),
     f.createStringLiteral("@rui/transform"),
+    undefined,
   );
 
 const componentsImport = (componentsModule: string) =>
@@ -65,44 +82,127 @@ const eventHandlersImport = (handlersModule: string) =>
     f.createStringLiteral(handlersModule),
   );
 
-const defineComponentTypes = () =>
+const defineComponentTypes = () => [
   f.createTypeAliasDeclaration(
     undefined,
     f.createIdentifier("CL"),
     undefined,
     f.createTypeQueryNode(f.createIdentifier("Components"), undefined),
-  );
+  ),
+  f.createTypeAliasDeclaration(
+    undefined,
+    f.createIdentifier("CProps"),
+    [
+      f.createTypeParameterDeclaration(
+        undefined,
+        f.createIdentifier("TComponentName"),
+        f.createTypeOperatorNode(
+          ts.SyntaxKind.KeyOfKeyword,
+          f.createTypeReferenceNode(f.createIdentifier("CL"), undefined),
+        ),
+        undefined,
+      ),
+    ],
+    f.createTypeReferenceNode(f.createIdentifier("Partial"), [
+      f.createTypeReferenceNode(f.createIdentifier("PropertiesOf"), [
+        f.createIndexedAccessTypeNode(
+          f.createTypeReferenceNode(f.createIdentifier("CL"), undefined),
+          f.createTypeReferenceNode(
+            f.createIdentifier("TComponentName"),
+            undefined,
+          ),
+        ),
+      ]),
+    ]),
+  ),
+  f.createTypeAliasDeclaration(
+    undefined,
+    f.createIdentifier("CEvents"),
+    [
+      f.createTypeParameterDeclaration(
+        undefined,
+        f.createIdentifier("TComponentName"),
+        f.createTypeOperatorNode(
+          ts.SyntaxKind.KeyOfKeyword,
+          f.createTypeReferenceNode(f.createIdentifier("CL"), undefined),
+        ),
+        undefined,
+      ),
+    ],
+    f.createTypeReferenceNode(f.createIdentifier("Partial"), [
+      f.createTypeReferenceNode(f.createIdentifier("EventsOf"), [
+        f.createIndexedAccessTypeNode(
+          f.createTypeReferenceNode(f.createIdentifier("CL"), undefined),
+          f.createTypeReferenceNode(
+            f.createIdentifier("TComponentName"),
+            undefined,
+          ),
+        ),
+      ]),
+    ]),
+  ),
+];
 
 export const defineScopeType = (
   flatComponentList: (RuiDataComponent | RuiVisualComponent)[],
-  vcl: Record<string, ComponentMetaInformation>,
-) =>
-  f.createTypeAliasDeclaration(
+  vcl: ComponentLibraryMetaInformation,
+) => {
+  const componentsWithPropsAsState = flatComponentList.filter(
+    (c): c is RuiVisualComponent =>
+      "propsAsState" in c && (c.propsAsState?.length ?? 0) > 0,
+  );
+  return f.createTypeAliasDeclaration(
     [f.createToken(ts.SyntaxKind.ExportKeyword)],
     "Scope",
     undefined,
-    f.createTypeLiteralNode(
-      flatComponentList
-        .filter(
-          (c) =>
-            c.component &&
-            vcl[c.component] &&
-            vcl[c.component].produces !== undefined,
-        )
-        .map((c) =>
-          f.createPropertySignature(
-            [f.createToken(ts.SyntaxKind.ReadonlyKeyword)],
-            c.id,
-            undefined,
-            vcl[c.component].produces?.type,
+    f.createIntersectionTypeNode([
+      f.createTypeLiteralNode(
+        flatComponentList
+          .filter(
+            (c) =>
+              c.component &&
+              vcl[c.component] &&
+              vcl[c.component].produces !== undefined,
+          )
+          .map((c) =>
+            f.createPropertySignature(
+              [f.createToken(ts.SyntaxKind.ReadonlyKeyword)],
+              c.id,
+              undefined,
+              vcl[c.component].produces?.type,
+            ),
           ),
-        ),
-    ),
+      ),
+      ...(componentsWithPropsAsState.length > 0
+        ? [
+            f.createTypeLiteralNode(
+              componentsWithPropsAsState.map((c) =>
+                f.createPropertySignature(
+                  [f.createToken(ts.SyntaxKind.ReadonlyKeyword)],
+                  c.id,
+                  undefined,
+                  f.createTypeLiteralNode(
+                    (c.propsAsState ?? []).map((prop) =>
+                      f.createPropertySignature(
+                        undefined,
+                        prop,
+                        f.createToken(ts.SyntaxKind.QuestionToken),
+                        vcl[c.component].properties[prop].type,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ]
+        : []),
+    ]),
   );
+};
 
 const wireVisualComponentsToReactComponents = (
   flatComponentList: (RuiDataComponent | RuiVisualComponent)[],
-  vcl: Record<string, ComponentMetaInformation>,
+  vcl: ComponentLibraryMetaInformation,
 ) =>
   flatComponentList
     .filter((c) => vcl[c.component].isVisual)
@@ -131,7 +231,7 @@ const wireVisualComponentsToReactComponents = (
 
 const writeConstObject = (
   name: string,
-  type: ts.TypeNode | undefined,
+  typeName: string | undefined,
   members: ts.PropertyAssignment[],
 ) =>
   f.createVariableStatement(
@@ -141,7 +241,9 @@ const writeConstObject = (
         f.createVariableDeclaration(
           f.createIdentifier(name),
           undefined,
-          undefined,
+          typeName
+            ? f.createTypeReferenceNode(f.createIdentifier(typeName), undefined)
+            : undefined,
           f.createObjectLiteralExpression(members, true),
         ),
       ],
@@ -171,12 +273,9 @@ const writeComponentProperties = (
               ),
               true,
             ),
-            f.createTypeReferenceNode(f.createIdentifier("PropertiesOf"), [
-              f.createIndexedAccessTypeNode(
-                f.createTypeReferenceNode(f.createIdentifier("CL"), undefined),
-                f.createLiteralTypeNode(
-                  f.createStringLiteral(component.component),
-                ),
+            f.createTypeReferenceNode(f.createIdentifier("CProps"), [
+              f.createLiteralTypeNode(
+                f.createStringLiteral(component.component),
               ),
             ]),
           ),
@@ -189,7 +288,7 @@ const createEventHandler = (
   component: RuiDataComponent | RuiVisualComponent,
   eventName: string,
   eventHandlerName: string,
-  vcl: Record<string, ComponentMetaInformation>,
+  vcl: ComponentLibraryMetaInformation,
 ) => {
   const functionType = vcl[component.component].events[eventName].type;
   if (functionType && ts.isFunctionTypeNode(functionType)) {
@@ -249,12 +348,9 @@ const writeComponentEvents = (
               ),
               true,
             ),
-            f.createTypeReferenceNode(f.createIdentifier("EventsOf"), [
-              f.createIndexedAccessTypeNode(
-                f.createTypeReferenceNode(f.createIdentifier("CL"), undefined),
-                f.createLiteralTypeNode(
-                  f.createStringLiteral(component.component),
-                ),
+            f.createTypeReferenceNode(f.createIdentifier("CEvents"), [
+              f.createLiteralTypeNode(
+                f.createStringLiteral(component.component),
               ),
             ]),
           ),
@@ -285,21 +381,194 @@ const createComponentFunction = (name: string, statements: ts.Statement[]) =>
     ),
   );
 
+const hasPropsAsState = (
+  component: RuiDataComponent | RuiVisualComponent,
+  vcl: ComponentLibraryMetaInformation,
+): component is RuiVisualComponent =>
+  isVisualComponent(component, vcl) &&
+  !!component.propsAsState &&
+  component.propsAsState.length > 0;
+
+const wrapWithPropsAsState = (
+  component: RuiDataComponent | RuiVisualComponent,
+  vcl: ComponentLibraryMetaInformation,
+  contents: ts.Expression,
+): ts.Expression =>
+  hasPropsAsState(component, vcl)
+    ? f.createCallExpression(
+        f.createIdentifier("exposePropsAsState"),
+        undefined,
+        [
+          contents,
+          f.createAsExpression(
+            f.createPropertyAccessExpression(
+              f.createIdentifier("properties"),
+              f.createIdentifier(capitalize(component.id)),
+            ),
+            f.createTypeReferenceNode(f.createIdentifier("CProps"), [
+              f.createLiteralTypeNode(
+                f.createStringLiteral(component.component),
+              ),
+            ]),
+          ),
+          ...(component.propsAsState ?? []).map((p) =>
+            f.createStringLiteral(p),
+          ),
+        ],
+      )
+    : contents;
+
+const writeScope = (
+  flatComponentList: (RuiDataComponent | RuiVisualComponent)[],
+  vcl: ComponentLibraryMetaInformation,
+) =>
+  writeConstObject(
+    "scope",
+    "Scope",
+    flatComponentList
+      .filter((c) => vcl[c.component].produces || hasPropsAsState(c, vcl))
+      .map((c) => {
+        const infoModel: ObjectLiteralElementLike[] = [];
+
+        if (c.props) {
+          infoModel.push(
+            f.createSpreadAssignment(
+              f.createPropertyAccessExpression(
+                f.createIdentifier("properties"),
+                f.createIdentifier(capitalize(c.id)),
+              ),
+            ),
+          );
+        }
+        if (c.events) {
+          infoModel.push(
+            f.createSpreadAssignment(
+              f.createPropertyAccessExpression(
+                f.createIdentifier("events"),
+                f.createIdentifier(capitalize(c.id)),
+              ),
+            ),
+          );
+        }
+
+        const production = vcl[c.component].produces
+          ? f.createCallExpression(
+              f.createPropertyAccessExpression(
+                f.createPropertyAccessExpression(
+                  f.createIdentifier("Components"),
+                  f.createIdentifier(c.component),
+                ),
+                f.createIdentifier("produce"),
+              ),
+              undefined,
+              [f.createObjectLiteralExpression(infoModel)],
+            )
+          : f.createObjectLiteralExpression([]);
+
+        return f.createPropertyAssignment(
+          c.id,
+          wrapWithPropsAsState(c, vcl, production),
+        );
+      }),
+  );
+
+const createCompositionNode = (
+  node: RuiVisualComponent,
+  flatComponentList: (RuiDataComponent | RuiVisualComponent)[],
+  vcl: Record<string, ComponentMetaInformation>,
+) => {
+  const usesChildren = node.childContainers?.children?.length;
+  const capNodeId = capitalize(node.id);
+  const componentInfo = vcl[node.component];
+
+  const attributes: ts.JsxAttributeLike[] = [];
+  if (node.props) {
+    attributes.push(
+      f.createJsxSpreadAttribute(
+        f.createPropertyAccessExpression(
+          f.createIdentifier("properties"),
+          f.createIdentifier(capNodeId),
+        ),
+      ),
+    );
+  }
+  if (componentInfo.produces || node.propsAsState) {
+    attributes.push(
+      f.createJsxSpreadAttribute(
+        f.createPropertyAccessExpression(
+          f.createIdentifier("scope"),
+          f.createIdentifier(node.id),
+        ),
+      ),
+    );
+  }
+  if (node.events) {
+    attributes.push(
+      f.createJsxSpreadAttribute(
+        f.createPropertyAccessExpression(
+          f.createIdentifier("events"),
+          f.createIdentifier(capNodeId),
+        ),
+      ),
+    );
+  }
+
+  if (usesChildren) {
+    const children = writeCompositionTree(
+      node.childContainers?.children ?? [],
+      flatComponentList,
+      vcl,
+    );
+    const addChildren: ts.NodeArray<ts.JsxChild> = ts.isJsxFragment(children)
+      ? children.children
+      : f.createNodeArray([children]);
+
+    return f.createJsxElement(
+      f.createJsxOpeningElement(
+        f.createIdentifier(capNodeId),
+        undefined,
+        f.createJsxAttributes(attributes),
+      ),
+      addChildren,
+      f.createJsxClosingElement(f.createIdentifier(capNodeId)),
+    );
+  }
+  return f.createJsxSelfClosingElement(
+    f.createIdentifier(capNodeId),
+    undefined,
+    f.createJsxAttributes(attributes),
+  );
+};
+
+const writeCompositionTree = (
+  nodes: RuiVisualComponent[],
+  flatComponentList: (RuiDataComponent | RuiVisualComponent)[],
+  vcl: Record<string, ComponentMetaInformation>,
+) => {
+  if (nodes.length === 1) {
+    return createCompositionNode(nodes[0], flatComponentList, vcl);
+  }
+
+  return f.createJsxFragment(
+    f.createJsxOpeningFragment(),
+    nodes.map((node) => createCompositionNode(node, flatComponentList, vcl)),
+    f.createJsxJsxClosingFragment(),
+  );
+};
+
+const createCommentBlock = (lines: string[]): string =>
+  ["*", ...lines.map((l) => `* ${l}`), "*"].join("\n");
+
 export const convertJsonToRui = async (
   structure: RuiJSONFormat,
-  resolve: Resolver,
+  vcl: ComponentLibraryMetaInformation,
 ): Promise<string> => {
   const printer = ts.createPrinter();
-
-  const componentLibraryInfo = await getProjectComponents(
-    structure.componentLibrary,
-    resolve,
-  );
 
   const flatComponentList = getFlatComponentList(structure);
   const missingComponents = flatComponentList
     .map((c) => c.component)
-    .filter((c) => !componentLibraryInfo[c]);
+    .filter((c) => !vcl[c]);
 
   if (missingComponents.length > 0) {
     throw new Error(
@@ -307,34 +576,34 @@ export const convertJsonToRui = async (
     );
   }
 
-  //   console.log(
-  //     JSON.stringify(
-  //       componentLibraryInfo,
-  //       (_key, value) => {
-  //         if (value && ts.isTypeNode(value)) {
-  //           return "(ts.TypeNode)";
-  //         }
-  //         return value;
-  //       },
-  //       2,
-  //     ),
-  //   );
-
   const sourceFile = f.createSourceFile(
     [
-      reactImport(),
+      addSyntheticLeadingComment(
+        reactImport(),
+        ts.SyntaxKind.MultiLineCommentTrivia,
+        createCommentBlock([
+          "This is an auto generated file. DO NOT EDIT MANUALLY.",
+          "Please use our Editor plugin to edit this file.",
+          "For more information about Rapid UI, see: ....",
+        ]),
+        true,
+      ),
       helpersImport(),
       componentsImport(structure.componentLibrary),
       eventHandlersImport(structure.eventHandlers),
-      defineComponentTypes(),
-      defineScopeType(flatComponentList, componentLibraryInfo),
+      ...defineComponentTypes(),
+      defineScopeType(flatComponentList, vcl),
       createComponentFunction(structure.id, [
-        ...wireVisualComponentsToReactComponents(
-          flatComponentList,
-          componentLibraryInfo,
-        ),
+        ...wireVisualComponentsToReactComponents(flatComponentList, vcl),
         writeComponentProperties(flatComponentList),
-        writeComponentEvents(flatComponentList, componentLibraryInfo),
+        writeComponentEvents(flatComponentList, vcl),
+        writeScope(flatComponentList, vcl),
+
+        f.createReturnStatement(
+          f.createParenthesizedExpression(
+            writeCompositionTree(structure.composition, flatComponentList, vcl),
+          ),
+        ),
       ]),
     ],
     f.createToken(ts.SyntaxKind.EndOfFileToken),

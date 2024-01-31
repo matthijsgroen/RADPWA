@@ -1,11 +1,9 @@
 import ts from "typescript";
 
-export type Resolver = (module: string) => string;
-
 export type RuiDataComponent = {
   id: string;
   component: string;
-
+  propsAsState?: string[];
   props?: Record<string, any>;
   events?: Record<string, any>;
 };
@@ -14,6 +12,7 @@ export type RuiVisualComponent = {
   id: string;
   component: string;
 
+  propsAsState?: string[];
   props?: Record<string, any>;
   events?: Record<string, any>;
   childContainers?: Record<string, RuiVisualComponent[]>;
@@ -53,6 +52,14 @@ export type ProductionInfo = {
   typeAsString: string;
 };
 
+export type ChildContainer = {
+  type?: ts.TypeNode;
+  typeAsString: string;
+  // could be extended with 'limits'
+};
+
+export type ChildContainers = Record<string, ChildContainer>;
+
 export type ComponentMetaInformation = {
   componentName: string;
   dependencies: ComponentDependency[];
@@ -60,6 +67,7 @@ export type ComponentMetaInformation = {
   properties: PropertyInfo;
   produces?: ProductionInfo;
   events: EventInfo;
+  childContainers: ChildContainers;
 };
 
 export type ComponentLibraryMetaInformation = Record<
