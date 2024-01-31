@@ -329,13 +329,17 @@ const writeComponentProperties = (
           f.createIdentifier(capitalize(component.id)),
           f.createSatisfiesExpression(
             f.createObjectLiteralExpression(
-              Object.entries(component.props || {}).map<ts.PropertyAssignment>(
-                ([k, v]) =>
-                  f.createPropertyAssignment(
-                    f.createIdentifier(k),
-                    convertValue(v),
-                  ),
-              ),
+              Object.entries(component.props || {})
+                .map<ts.PropertyAssignment | undefined>(([k, v]) => {
+                  const value = convertValue(v);
+
+                  return value
+                    ? f.createPropertyAssignment(f.createIdentifier(k), value)
+                    : undefined;
+                })
+                .filter(
+                  (item): item is ts.PropertyAssignment => item !== undefined,
+                ),
               true,
             ),
             f.createTypeReferenceNode(f.createIdentifier("CProps"), [
@@ -593,6 +597,28 @@ const createCompositionNode = (
       ),
     );
   }
+
+  Object.entries(node.props || {})
+    .filter(
+      (v): v is [string, { ref: string }] =>
+        typeof v[1] === "object" && "ref" in v[1],
+    )
+    .forEach(([k, v]) => {
+      attributes.push(
+        f.createJsxAttribute(
+          f.createIdentifier(k),
+          f.createJsxExpression(
+            undefined,
+            f.createPropertyAccessChain(
+              f.createIdentifier("scope"),
+              undefined,
+              f.createIdentifier(v.ref),
+            ),
+          ),
+        ),
+      );
+    });
+
   if (componentInfo.produces || node.propsAsState) {
     attributes.push(
       f.createJsxSpreadAttribute(

@@ -95,6 +95,30 @@ const getEventsFor = (
   return undefined;
 };
 
+const getScopeReferences = (
+  attributes: ts.JsxAttributes,
+): Record<string, { ref: string }> => {
+  const result: Record<string, { ref: string }> = {};
+  attributes.forEachChild((node) => {
+    if (
+      ts.isJsxAttribute(node) &&
+      ts.isIdentifier(node.name) &&
+      node.initializer &&
+      ts.isJsxExpression(node.initializer) &&
+      node.initializer.expression &&
+      ts.isPropertyAccessExpression(node.initializer.expression)
+    ) {
+      const propStart = node.initializer.expression;
+      const reference = propStart.getText();
+      if (reference.startsWith("scope.")) {
+        result[node.name.text] = { ref: reference.slice("scope.".length) };
+      }
+    }
+  });
+
+  return result;
+};
+
 const extractChildrenFromAttributes = (
   containerNames: string[],
   attributes: ts.JsxAttributes,
@@ -210,6 +234,11 @@ const convertJSXtoComponent = (
     const props = getPropertiesFor(properties, capitalize(tagName));
     const eventHandlers = getEventsFor(events, capitalize(tagName));
 
+    const references = getScopeReferences(element.attributes);
+    if (props && references) {
+      Object.assign(props, references);
+    }
+
     const childContainers = extractChildren(
       componentType,
       element,
@@ -227,7 +256,7 @@ const convertJSXtoComponent = (
         id,
         component: componentType,
         propsAsState,
-        props,
+        props: props ? props : references ? references : undefined,
         events: eventHandlers,
         childContainers,
       },
