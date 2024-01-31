@@ -194,6 +194,48 @@ export const mergeType = (
   return f.createIntersectionTypeNode(intersection);
 };
 
+const componentAsType = (
+  c: RuiDataComponent | RuiVisualComponent,
+  vcl: ComponentLibraryMetaInformation,
+): ts.TypeNode => {
+  const type = vcl[c.component].produces?.type;
+  const propsAsStateType = c.propsAsState
+    ? f.createTypeLiteralNode(
+        c.propsAsState.map((prop) =>
+          f.createPropertySignature(
+            undefined,
+            prop,
+            f.createToken(ts.SyntaxKind.QuestionToken),
+            vcl[c.component].properties[prop].type,
+          ),
+        ),
+      )
+    : undefined;
+  const childComponents = c.childContainers
+    ? f.createTypeLiteralNode(
+        Object.entries(c.childContainers).map(([k, v]) =>
+          f.createPropertySignature(
+            [f.createToken(ts.SyntaxKind.ReadonlyKeyword)],
+            k,
+            undefined,
+            f.createTypeLiteralNode(
+              v.map((c) =>
+                f.createPropertySignature(
+                  [f.createToken(ts.SyntaxKind.ReadonlyKeyword)],
+                  c.id,
+                  undefined,
+                  componentAsType(c, vcl),
+                ),
+              ),
+            ),
+          ),
+        ),
+      )
+    : undefined;
+
+  return mergeType(type, propsAsStateType, childComponents);
+};
+
 export const defineScopeType = (
   flatComponentList: (RuiDataComponent | RuiVisualComponent)[],
   vcl: ComponentLibraryMetaInformation,
@@ -211,30 +253,14 @@ export const defineScopeType = (
     f.createTypeLiteralNode(
       flatComponentList
         .filter((c) => hasPropsAsState(c) || producesResultType(c))
-        .map((c) => {
-          const type = vcl[c.component].produces?.type;
-          const propsAsStateType = c.propsAsState
-            ? f.createTypeLiteralNode(
-                c.propsAsState.map((prop) =>
-                  f.createPropertySignature(
-                    undefined,
-                    prop,
-                    f.createToken(ts.SyntaxKind.QuestionToken),
-                    vcl[c.component].properties[prop].type,
-                  ),
-                ),
-              )
-            : undefined;
-
-          const merge = mergeType(type, propsAsStateType);
-
-          return f.createPropertySignature(
+        .map((c) =>
+          f.createPropertySignature(
             [f.createToken(ts.SyntaxKind.ReadonlyKeyword)],
             c.id,
             undefined,
-            merge,
-          );
-        }),
+            componentAsType(c, vcl),
+          ),
+        ),
     ),
   );
 };
