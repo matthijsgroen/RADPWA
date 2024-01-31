@@ -11,7 +11,7 @@ export const convertValue = (v: unknown) => {
     return f.createTrue();
   }
 
-  return f.createStringLiteral("Not yet supported");
+  return undefined;
 };
 
 type JSON = null | string | number | boolean | JSON[] | Record<string, any>;
