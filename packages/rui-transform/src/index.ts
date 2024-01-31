@@ -4,9 +4,11 @@ export type {
   ComponentDefinition,
   VisualComponentDefinition,
   ComponentLibrary,
+  ComponentProductRef,
 } from "./component-types";
 
 export { exposePropsAsState } from "./state/exposePropsAsState";
+export { composeDataChildren } from "./data/composeDataChildren";
 
 export type {
   RuiJSONFormat,
