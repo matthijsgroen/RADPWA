@@ -20,7 +20,7 @@
   "source": "src/index.html",
   "scripts": {
     "start": "parcel serve src/index.html",
-    "transform": "rui-transform"
+    "transform": "rui-transform",
     "build": "parcel build --no-content-hash",
     "copy-to-extension": "node scripts/copy-to-extension.js",
     "build-and-copy": "yarn build && yarn copy-to-extension"
