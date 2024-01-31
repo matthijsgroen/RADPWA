@@ -1,6 +1,7 @@
 import prettier from "prettier";
 import ts, {
   ObjectLiteralElementLike,
+  PropertySignature,
   addSyntheticLeadingComment,
   factory as f,
 } from "typescript";
@@ -157,60 +158,84 @@ const defineComponentTypes = () => [
   ),
 ];
 
+export const mergeType = (
+  ...items: (ts.TypeNode | undefined)[]
+): ts.TypeNode => {
+  const intersection: ts.TypeNode[] = [];
+
+  for (const item of items) {
+    if (item !== undefined) {
+      if (ts.isTypeLiteralNode(item)) {
+        const existingLiteral = intersection.findIndex((e) =>
+          ts.isTypeLiteralNode(e),
+        );
+        if (existingLiteral !== -1) {
+          const existingNode = intersection[existingLiteral];
+          const propSignatures = ts.isTypeLiteralNode(existingNode)
+            ? existingNode.members
+            : f.createNodeArray<PropertySignature>([]);
+
+          intersection[existingLiteral] = f.createTypeLiteralNode(
+            propSignatures.concat(item.members),
+          );
+        }
+      }
+
+      intersection.push(item);
+    }
+  }
+
+  if (intersection.length === 0) {
+    return f.createKeywordTypeNode(ts.SyntaxKind.UnknownKeyword);
+  }
+  if (intersection.length === 1) {
+    return intersection[0];
+  }
+  return f.createIntersectionTypeNode(intersection);
+};
+
 export const defineScopeType = (
   flatComponentList: (RuiDataComponent | RuiVisualComponent)[],
   vcl: ComponentLibraryMetaInformation,
 ) => {
-  const componentsWithPropsAsState = flatComponentList.filter(
-    (c): c is RuiVisualComponent =>
-      "propsAsState" in c && (c.propsAsState?.length ?? 0) > 0,
-  );
+  const hasPropsAsState = (c: RuiDataComponent | RuiVisualComponent) =>
+    "propsAsState" in c && (c.propsAsState?.length ?? 0) > 0;
+
+  const producesResultType = (c: RuiDataComponent | RuiVisualComponent) =>
+    c.component && vcl[c.component] && vcl[c.component].produces !== undefined;
+
   return f.createTypeAliasDeclaration(
     [f.createToken(ts.SyntaxKind.ExportKeyword)],
     "Scope",
     undefined,
-    f.createIntersectionTypeNode([
-      f.createTypeLiteralNode(
-        flatComponentList
-          .filter(
-            (c) =>
-              c.component &&
-              vcl[c.component] &&
-              vcl[c.component].produces !== undefined,
-          )
-          .map((c) =>
-            f.createPropertySignature(
-              [f.createToken(ts.SyntaxKind.ReadonlyKeyword)],
-              c.id,
-              undefined,
-              vcl[c.component].produces?.type,
-            ),
-          ),
-      ),
-      ...(componentsWithPropsAsState.length > 0
-        ? [
-            f.createTypeLiteralNode(
-              componentsWithPropsAsState.map((c) =>
-                f.createPropertySignature(
-                  [f.createToken(ts.SyntaxKind.ReadonlyKeyword)],
-                  c.id,
-                  undefined,
-                  f.createTypeLiteralNode(
-                    (c.propsAsState ?? []).map((prop) =>
-                      f.createPropertySignature(
-                        undefined,
-                        prop,
-                        f.createToken(ts.SyntaxKind.QuestionToken),
-                        vcl[c.component].properties[prop].type,
-                      ),
-                    ),
+    f.createTypeLiteralNode(
+      flatComponentList
+        .filter((c) => hasPropsAsState(c) || producesResultType(c))
+        .map((c) => {
+          const type = vcl[c.component].produces?.type;
+          const propsAsStateType = c.propsAsState
+            ? f.createTypeLiteralNode(
+                c.propsAsState.map((prop) =>
+                  f.createPropertySignature(
+                    undefined,
+                    prop,
+                    f.createToken(ts.SyntaxKind.QuestionToken),
+                    vcl[c.component].properties[prop].type,
                   ),
                 ),
-              ),
-            ),
-          ]
-        : []),
-    ]),
+              )
+            : undefined;
+
+          const merge = mergeType(type, propsAsStateType);
+
+          return f.createPropertySignature(
+            [f.createToken(ts.SyntaxKind.ReadonlyKeyword)],
+            c.id,
+            undefined,
+            merge,
+          );
+        }),
+    ),
   );
 };
 
