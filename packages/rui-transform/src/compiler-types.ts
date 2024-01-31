@@ -6,6 +6,7 @@ export type RuiDataComponent = {
   propsAsState?: string[];
   props?: Record<string, any>;
   events?: Record<string, any>;
+  childContainers?: Record<string, RuiDataComponent[]>;
 };
 
 export type RuiVisualComponent = {

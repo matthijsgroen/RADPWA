@@ -43,8 +43,9 @@ const Action: ComponentDefinition<
       busy,
       execute: async () => {
         setBusy(true);
-        // Maybe toggle a 'busy' flag
+        // Could trigger an onStart event
         await props.onExecute?.();
+        // Could trigger an onFinished event
         setBusy(false);
       },
       ...props,
