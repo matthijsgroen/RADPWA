@@ -9,6 +9,7 @@ export type {
 
 export { exposePropsAsState } from "./state/exposePropsAsState";
 export { composeDataChildren } from "./data/composeDataChildren";
+export { getProjectComponentsFromType } from "./componentLibrary/getProjectComponentsFromType";
 
 export type {
   RuiJSONFormat,

@@ -7,6 +7,7 @@ import {
 } from "../compiler-types";
 import { capitalize, uncapitalize } from "../string-utils";
 import { valueToJSON } from "../value-utils";
+import { program } from "commander";
 
 const getPropertiesFor = (
   properties: ts.ObjectLiteralExpression | undefined,
@@ -97,6 +98,7 @@ const getEventsFor = (
 
 const getScopeReferences = (
   attributes: ts.JsxAttributes,
+  context: ExtractionContext,
 ): Record<string, { ref: string }> => {
   const result: Record<string, { ref: string }> = {};
   attributes.forEachChild((node) => {
@@ -109,7 +111,7 @@ const getScopeReferences = (
       ts.isPropertyAccessExpression(node.initializer.expression)
     ) {
       const propStart = node.initializer.expression;
-      const reference = propStart.getText();
+      const reference = propStart.getText(context.sourceFile);
       if (reference.startsWith("scope.")) {
         result[node.name.text] = { ref: reference.slice("scope.".length) };
       }
@@ -122,11 +124,7 @@ const getScopeReferences = (
 const extractChildrenFromAttributes = (
   containerNames: string[],
   attributes: ts.JsxAttributes,
-  componentMapping: Record<string, string>,
-  vcl: ComponentLibraryMetaInformation,
-  properties: ts.ObjectLiteralExpression | undefined,
-  events: ts.ObjectLiteralExpression | undefined,
-  propertiesAsState: Record<string, string[]>,
+  context: ExtractionContext,
 ) => {
   const result: Record<string, RuiVisualComponent[]> = {};
 
@@ -142,11 +140,7 @@ const extractChildrenFromAttributes = (
     ) {
       result[attribute.name.text] = convertJSXtoComponent(
         attribute.initializer.expression,
-        componentMapping,
-        vcl,
-        properties,
-        events,
-        propertiesAsState,
+        context,
       );
     }
   });
@@ -157,13 +151,9 @@ const extractChildrenFromAttributes = (
 const extractChildren = (
   componentType: string,
   element: ts.JsxChild,
-  componentMapping: Record<string, string>,
-  vcl: ComponentLibraryMetaInformation,
-  properties: ts.ObjectLiteralExpression | undefined,
-  events: ts.ObjectLiteralExpression | undefined,
-  propertiesAsState: Record<string, string[]>,
+  context: ExtractionContext,
 ): RuiVisualComponent["childContainers"] => {
-  const componentInfo = vcl[componentType];
+  const componentInfo = context.vcl[componentType];
   const childContainers = Object.keys(componentInfo.childContainers);
   if (childContainers.length === 0) {
     return undefined;
@@ -176,11 +166,7 @@ const extractChildren = (
       ...extractChildrenFromAttributes(
         childContainers,
         element.attributes,
-        componentMapping,
-        vcl,
-        properties,
-        events,
-        propertiesAsState,
+        context,
       ),
     };
   }
@@ -190,23 +176,12 @@ const extractChildren = (
       ...extractChildrenFromAttributes(
         childContainers,
         element.openingElement.attributes,
-        componentMapping,
-        vcl,
-        properties,
-        events,
-        propertiesAsState,
+        context,
       ),
     };
     if (element.children && childContainers.includes("children")) {
       const children = element.children.flatMap((child) =>
-        convertJSXtoComponent(
-          child,
-          componentMapping,
-          vcl,
-          properties,
-          events,
-          propertiesAsState,
-        ),
+        convertJSXtoComponent(child, context),
       );
       result["children"] = (result.children || []).concat(children);
     }
@@ -221,35 +196,23 @@ const extractChildren = (
 
 const convertJSXtoComponent = (
   element: ts.JsxChild,
-  componentMapping: Record<string, string>,
-  vcl: ComponentLibraryMetaInformation,
-  properties: ts.ObjectLiteralExpression | undefined,
-  events: ts.ObjectLiteralExpression | undefined,
-  propertiesAsState: Record<string, string[]>,
+  context: ExtractionContext,
 ): RuiVisualComponent[] => {
   if (ts.isJsxSelfClosingElement(element) && ts.isIdentifier(element.tagName)) {
     const tagName = element.tagName.text;
-    const componentType = componentMapping[tagName];
+    const componentType = context.componentMapping[tagName];
 
-    const props = getPropertiesFor(properties, capitalize(tagName));
-    const eventHandlers = getEventsFor(events, capitalize(tagName));
+    const props = getPropertiesFor(context.properties, capitalize(tagName));
+    const eventHandlers = getEventsFor(context.events, capitalize(tagName));
 
-    const references = getScopeReferences(element.attributes);
+    const references = getScopeReferences(element.attributes, context);
     if (props && references) {
       Object.assign(props, references);
     }
 
-    const childContainers = extractChildren(
-      componentType,
-      element,
-      componentMapping,
-      vcl,
-      properties,
-      events,
-      propertiesAsState,
-    );
+    const childContainers = extractChildren(componentType, element, context);
     const id = uncapitalize(tagName);
-    const propsAsState = propertiesAsState[id]; //getPropertiesAsStateFor(propertiesAsState, id);
+    const propsAsState = context.propertiesAsState[id];
 
     return [
       {
@@ -267,20 +230,12 @@ const convertJSXtoComponent = (
     ts.isIdentifier(element.openingElement.tagName)
   ) {
     const id = element.openingElement.tagName.text;
-    const componentType = componentMapping[id];
+    const componentType = context.componentMapping[id];
 
-    const props = getPropertiesFor(properties, capitalize(id));
-    const eventHandlers = getEventsFor(events, capitalize(id));
+    const props = getPropertiesFor(context.properties, capitalize(id));
+    const eventHandlers = getEventsFor(context.events, capitalize(id));
 
-    const childContainers = extractChildren(
-      componentType,
-      element,
-      componentMapping,
-      vcl,
-      properties,
-      events,
-      propertiesAsState,
-    );
+    const childContainers = extractChildren(componentType, element, context);
 
     return [
       {
@@ -294,14 +249,7 @@ const convertJSXtoComponent = (
   }
   if (ts.isJsxFragment(element)) {
     return element.children.flatMap((node) =>
-      convertJSXtoComponent(
-        node,
-        componentMapping,
-        vcl,
-        properties,
-        events,
-        propertiesAsState,
-      ),
+      convertJSXtoComponent(node, context),
     );
   }
   if (ts.isJsxText(element)) {
@@ -317,10 +265,7 @@ const convertJSXtoComponent = (
 
 const extractChildContainers = (
   node: ts.Expression,
-  vcl: ComponentLibraryMetaInformation,
-  properties: ts.ObjectLiteralExpression | undefined,
-  events: ts.ObjectLiteralExpression | undefined,
-  propertiesAsState: Record<string, string[]>,
+  context: ExtractionContext,
 ): Record<string, RuiDataComponent[]> => {
   const result: Record<string, RuiDataComponent[]> = {};
   if (ts.isObjectLiteralExpression(node)) {
@@ -337,10 +282,7 @@ const extractChildContainers = (
             const childComponent = extractDataComponent(
               childId,
               pr.initializer,
-              vcl,
-              properties,
-              events,
-              propertiesAsState,
+              context,
             );
             if (childComponent) {
               childList.push(childComponent);
@@ -355,28 +297,24 @@ const extractChildContainers = (
   return result;
 };
 
+type ExtractionContext = {
+  componentMapping: Record<string, string>;
+  vcl: ComponentLibraryMetaInformation;
+  properties: ts.ObjectLiteralExpression | undefined;
+  events: ts.ObjectLiteralExpression | undefined;
+  propertiesAsState: Record<string, string[]>;
+  sourceFile: ts.SourceFile;
+};
+
 const extractComposition = (
   component: ts.ArrowFunction,
-  componentMapping: Record<string, string>,
-  vcl: ComponentLibraryMetaInformation,
-  properties: ts.ObjectLiteralExpression | undefined,
-  events: ts.ObjectLiteralExpression | undefined,
-  propertiesAsState: Record<string, string[]>,
+  context: ExtractionContext,
 ): RuiVisualComponent[] => {
   const result: RuiVisualComponent[] = [];
   ts.forEachChild(component.body, (node) => {
     if (ts.isReturnStatement(node)) {
       if (node.expression && ts.isJsxChild(node.expression)) {
-        result.push(
-          ...convertJSXtoComponent(
-            node.expression,
-            componentMapping,
-            vcl,
-            properties,
-            events,
-            propertiesAsState,
-          ),
-        );
+        result.push(...convertJSXtoComponent(node.expression, context));
       }
       if (
         node.expression &&
@@ -385,14 +323,7 @@ const extractComposition = (
         ts.isJsxChild(node.expression.expression)
       ) {
         result.push(
-          ...convertJSXtoComponent(
-            node.expression.expression,
-            componentMapping,
-            vcl,
-            properties,
-            events,
-            propertiesAsState,
-          ),
+          ...convertJSXtoComponent(node.expression.expression, context),
         );
       }
     }
@@ -403,10 +334,7 @@ const extractComposition = (
 const extractDataComponent = (
   id: string,
   node: ts.Node,
-  vcl: ComponentLibraryMetaInformation,
-  properties: ts.ObjectLiteralExpression | undefined,
-  events: ts.ObjectLiteralExpression | undefined,
-  propertiesAsState: Record<string, string[]>,
+  context: ExtractionContext,
 ): RuiDataComponent | undefined => {
   if (
     ts.isCallExpression(node) &&
@@ -417,10 +345,10 @@ const extractDataComponent = (
     const propertyAccess = node.expression.expression;
     const componentName = propertyAccess.name.text;
 
-    const componentInfo = vcl[componentName];
+    const componentInfo = context.vcl[componentName];
     if (componentInfo && componentInfo.isVisual === false) {
-      const props = getPropertiesFor(properties, capitalize(id));
-      const eventHandlers = getEventsFor(events, capitalize(id));
+      const props = getPropertiesFor(context.properties, capitalize(id));
+      const eventHandlers = getEventsFor(context.events, capitalize(id));
 
       return {
         id,
@@ -436,14 +364,7 @@ const extractDataComponent = (
     node.expression.text === "exposePropsAsState"
   ) {
     const source = node.arguments[0];
-    const component = extractDataComponent(
-      id,
-      source,
-      vcl,
-      properties,
-      events,
-      propertiesAsState,
-    );
+    const component = extractDataComponent(id, source, context);
 
     const stateProps = node.arguments
       .map((v, i) => {
@@ -458,7 +379,7 @@ const extractDataComponent = (
         propsAsState: stateProps,
       };
     } else {
-      propertiesAsState[id] = stateProps;
+      context.propertiesAsState[id] = stateProps;
     }
   }
   if (
@@ -467,22 +388,9 @@ const extractDataComponent = (
     node.expression.text === "composeDataChildren"
   ) {
     const source = node.arguments[0];
-    const component = extractDataComponent(
-      id,
-      source,
-      vcl,
-      properties,
-      events,
-      propertiesAsState,
-    );
+    const component = extractDataComponent(id, source, context);
 
-    const childContainers = extractChildContainers(
-      node.arguments[1],
-      vcl,
-      properties,
-      events,
-      propertiesAsState,
-    );
+    const childContainers = extractChildContainers(node.arguments[1], context);
     if (component) {
       return {
         ...component,
@@ -493,11 +401,16 @@ const extractDataComponent = (
 };
 
 export const convertRuiToJson = async (
-  program: ts.Program,
-  sourcePath: string,
+  fileName: string,
+  sourceContents: string,
   vcl: ComponentLibraryMetaInformation,
 ): Promise<RuiJSONFormat> => {
-  const sourceFile = program.getSourceFile(sourcePath);
+  // const sourceFile = program.getSourceFile(sourcePath);
+  const sourceFile = ts.createSourceFile(
+    fileName,
+    sourceContents,
+    ts.ScriptTarget.Latest,
+  );
   if (!sourceFile) {
     return {
       componentLibrary: "",
@@ -606,20 +519,22 @@ export const convertRuiToJson = async (
     }
   });
 
+  const context: ExtractionContext = {
+    componentMapping,
+    vcl,
+    properties,
+    events,
+    propertiesAsState,
+    sourceFile,
+  };
+
   const components: RuiDataComponent[] = [];
   if (scope) {
     // detect 'data components' & props and state
     ts.forEachChild(scope, (node) => {
       if (ts.isPropertyAssignment(node) && ts.isIdentifier(node.name)) {
         const id = node.name.text;
-        const component = extractDataComponent(
-          id,
-          node.initializer,
-          vcl,
-          properties,
-          events,
-          propertiesAsState,
-        );
+        const component = extractDataComponent(id, node.initializer, context);
         if (component) {
           components.push(component);
         }
@@ -627,14 +542,7 @@ export const convertRuiToJson = async (
     });
   }
 
-  const composition = extractComposition(
-    component,
-    componentMapping,
-    vcl,
-    properties,
-    events,
-    propertiesAsState,
-  );
+  const composition = extractComposition(component, context);
 
   return {
     componentLibrary,
