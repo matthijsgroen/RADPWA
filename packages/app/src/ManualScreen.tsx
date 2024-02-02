@@ -17,7 +17,7 @@ import {
   updateNestedItemByKey,
 } from "./utils";
 import { CommandType, useVsCode } from "./hooks/useVsCode";
-import { RuiJSONFormat } from "@rui/transform";
+import { ComponentLibraryMetaInformation, RuiJSONFormat } from "@rui/transform";
 import { ProgressSpinner } from "primereact/progressspinner";
 
 // Keeping this here for reference
@@ -27,22 +27,6 @@ type PropertyItem = {
   value: string | boolean | null | number;
 };
 
-const propertyList: PropertyItem[] = [
-  { name: "id", type: "string", value: "button1" },
-  { name: "caption", type: "string", value: "Demo Button" },
-  { name: "shadow", type: "boolean", value: true },
-  { name: "darkMode", type: "boolean", value: false },
-  { name: "unset", type: "boolean", value: null },
-];
-
-const eventList: PropertyItem[] = [
-  {
-    name: "onClick",
-    type: "functionRef",
-    value: "button1Click",
-  },
-];
-
 const mainScreen = () => {
   // Only works when the app is running in VSCode
   const { postMessage } = useVsCode();
@@ -50,7 +34,9 @@ const mainScreen = () => {
   const [selectedComponent, setSelectedComponent] =
     useState<ComponentTreeNode | null>(null);
 
-  const [ruicomponents, setRuiComponents] = useState<RuiJSONFormat>();
+  const [screenStructure, setScreenStructure] = useState<RuiJSONFormat>();
+  const [componentsStructure, setComponentsStructure] =
+    useState<ComponentLibraryMetaInformation>();
 
   const componentPropertyList = processComponentProps(
     selectedComponent?.data?.props,
@@ -63,7 +49,7 @@ const mainScreen = () => {
     if (e.newValue === e.rowData.value) return;
 
     const newRuiComponents: RuiJSONFormat = JSON.parse(
-      JSON.stringify(ruicomponents),
+      JSON.stringify(screenStructure),
     );
 
     const isUpdated = updateNestedItemByKey(
@@ -89,7 +75,12 @@ const mainScreen = () => {
   const receiveMessage = (event: MessageEvent<any>) => {
     console.log("** Received message from the extension **", event.data);
     // Process the JSON data received from the extension
-    setRuiComponents(event.data.data);
+    if (event.data.type === "UPDATE_COMMAND") {
+      setScreenStructure(event.data.data);
+    }
+    if (event.data.type === "UPDATE_COMPONENTS") {
+      setComponentsStructure(event.data.data);
+    }
   };
 
   return (
@@ -100,9 +91,9 @@ const mainScreen = () => {
             <SplitterPanel minSize={10}>
               <Pane>
                 <Panel header={"View"}>
-                  {ruicomponents ? (
+                  {screenStructure ? (
                     <ComponentTreeView
-                      ruiComponents={ruicomponents}
+                      ruiComponents={screenStructure}
                       selectedComponent={setSelectedComponent}
                     />
                   ) : (
@@ -195,6 +186,21 @@ const mainScreen = () => {
               </Panel>
             </SplitterPanel>
           </Splitter>
+        </SplitterPanel>
+        <SplitterPanel>
+          <Pane>
+            <Panel header={"Components"}>
+              {componentsStructure ? (
+                <ul>
+                  {Object.entries(componentsStructure).map(([k, v]) => (
+                    <li key={k}>{k}</li>
+                  ))}
+                </ul>
+              ) : (
+                <ProgressSpinner />
+              )}
+            </Panel>
+          </Pane>
         </SplitterPanel>
       </Splitter>
     </Pane>

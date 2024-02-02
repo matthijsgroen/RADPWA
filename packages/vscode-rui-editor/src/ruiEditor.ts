@@ -2,8 +2,8 @@ import * as vscode from "vscode";
 import { getNonce } from "./utils";
 import ts from "typescript";
 import {
-  ComponentLibraryMetaInformation,
-  RuiJSONFormat,
+  type ComponentLibraryMetaInformation,
+  type RuiJSONFormat,
   convertRuiToJson,
   getProjectComponentsFromType,
 } from "@rui/transform";
@@ -28,55 +28,75 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
     _token: vscode.CancellationToken,
   ): void | Thenable<void> {
     // Open the document editor and custom text editor side by side
-    vscode.window.showTextDocument(document, vscode.ViewColumn.Beside);
+    // vscode.window.showTextDocument(document, vscode.ViewColumn.Beside);
 
-    const host = ts.createCompilerHost({ rootDir: "." });
-    const program = ts.createProgram({
-      rootNames: [document.fileName, "./rapid-components.tsx"],
-      options: { rootDir: "." },
-      host,
-    });
-    const vcl = getProjectComponentsFromType(program, "./rapid-components.tsx");
+    vscode.workspace
+      .findFiles("rapid-components.tsx", undefined, 1)
+      .then((result) => {
+        const libPath = result[0].fsPath;
 
-    webviewPanel.webview.options = {
-      enableScripts: true,
-    };
-    webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview);
+        const host = ts.createCompilerHost({ rootDir: "." });
+        const program = ts.createProgram({
+          rootNames: [document.fileName, libPath],
+          options: { rootDir: "." },
+          host,
+        });
+        const vcl = getProjectComponentsFromType(program, libPath);
+        const safeVCL = JSON.parse(
+          JSON.stringify(vcl, (key, value) => {
+            if (value && typeof value === "object" && ts.isTypeNode(value)) {
+              return undefined;
+            }
+            return value;
+          }),
+        );
 
-    // Receive message from the webview.
-    webviewPanel.webview.onDidReceiveMessage((message) => {
-      switch (message.type.toString()) {
-        case "EDIT_COMMAND":
-          const receivedData = message.data;
-          console.log("** Received updated JSON from the webview **");
-          this.editDocument(webviewPanel, document, receivedData, vcl);
-          return;
-      }
-    });
+        webviewPanel.webview.options = {
+          enableScripts: true,
+        };
+        webviewPanel.webview.html = this.getHtmlForWebview(
+          webviewPanel.webview,
+        );
 
-    const changeDocumentSubscription = vscode.workspace.onDidChangeTextDocument(
-      (e) => {
-        if (e.document.uri.toString() === document.uri.toString()) {
-          this.updateWebview(webviewPanel, document, vcl);
-        }
-      },
-    );
-    // Make sure we get rid of the listener when our editor is closed.
-    webviewPanel.onDidDispose(() => {
-      changeDocumentSubscription.dispose();
-    });
+        // Receive message from the webview.
+        webviewPanel.webview.onDidReceiveMessage((message) => {
+          switch (message.type.toString()) {
+            case "EDIT_COMMAND":
+              const receivedData = message.data;
+              console.log("** Received updated JSON from the webview **");
+              this.editDocument(webviewPanel, document, receivedData, vcl);
+              return;
+          }
+        });
 
-    setTimeout(() => {
-      this.updateWebview(webviewPanel, document, vcl);
-    }, 500);
+        const changeDocumentSubscription =
+          vscode.workspace.onDidChangeTextDocument((e) => {
+            if (e.document.uri.toString() === document.uri.toString()) {
+              this.updateWebview(webviewPanel, document, vcl, safeVCL);
+            }
+          });
+        // Make sure we get rid of the listener when our editor is closed.
+        webviewPanel.onDidDispose(() => {
+          changeDocumentSubscription.dispose();
+        });
+
+        setTimeout(() => {
+          this.updateWebview(webviewPanel, document, vcl, safeVCL);
+        }, 500);
+      });
   }
 
   private updateWebview(
     webviewPanel: vscode.WebviewPanel,
     document: vscode.TextDocument,
     vcl: ComponentLibraryMetaInformation,
+    safeVcl: ComponentLibraryMetaInformation,
   ) {
     console.log("** Updating webview **");
+    webviewPanel.webview.postMessage({
+      type: "UPDATE_COMPONENTS",
+      data: safeVcl,
+    });
     webviewPanel.webview.postMessage({
       type: "UPDATE_COMMAND",
       data: this.getDocumentAsJson(document, vcl),
@@ -147,7 +167,7 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
     vscode.workspace.applyEdit(edit);
 
     // Update the webview
-    this.updateWebview(webviewPanel, document, vcl);
+    // this.updateWebview(webviewPanel, document, vcl, sav);
 
     console.log("** Updated succesfully **");
   }
