@@ -1,6 +1,6 @@
 {
   "name": "studio",
-  "packageManager": "yarn@4.0.2",
+  "packageManager": "yarn@4.1.0",
   "version": "1.0.0-alpha",
   "dependencies": {
     "highlight.js": "^11.9.0",

@@ -24,7 +24,7 @@
         "displayName": "RUI Editor",
         "selector": [
           {
-            "filenamePattern": "*.rui"
+            "filenamePattern": "*.rui.tsx"
           }
         ],
         "priority": "default"
@@ -33,11 +33,14 @@
   },
   "scripts": {
     "vscode:prepublish": "yarn run compile",
-    "compile": "tsc -p ./",
+    "build": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "yarn run compile && yarn run lint",
     "lint": "eslint src --ext ts",
     "test": "vscode-test"
+  },
+  "dependencies": {
+    "@rui/transform": "workspace:^"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.6",

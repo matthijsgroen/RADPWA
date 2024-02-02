@@ -1,5 +1,12 @@
 import * as vscode from "vscode";
 import { getNonce } from "./utils";
+import ts from "typescript";
+import {
+  ComponentLibraryMetaInformation,
+  RuiJSONFormat,
+  convertRuiToJson,
+  getProjectComponentsFromType,
+} from "@rui/transform";
 
 export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
   constructor(private readonly context: vscode.ExtensionContext) {}
@@ -22,6 +29,15 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
   ): void | Thenable<void> {
     // Open the document editor and custom text editor side by side
     vscode.window.showTextDocument(document, vscode.ViewColumn.Beside);
+
+    const host = ts.createCompilerHost({ rootDir: "." });
+    const program = ts.createProgram({
+      rootNames: [document.fileName, "./rapid-components.tsx"],
+      options: { rootDir: "." },
+      host,
+    });
+    const vcl = getProjectComponentsFromType(program, "./rapid-components.tsx");
+
     webviewPanel.webview.options = {
       enableScripts: true,
     };
@@ -33,7 +49,7 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
         case "EDIT_COMMAND":
           const receivedData = message.data;
           console.log("** Received updated JSON from the webview **");
-          this.editDocument(webviewPanel, document, receivedData);
+          this.editDocument(webviewPanel, document, receivedData, vcl);
           return;
       }
     });
@@ -41,7 +57,7 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
     const changeDocumentSubscription = vscode.workspace.onDidChangeTextDocument(
       (e) => {
         if (e.document.uri.toString() === document.uri.toString()) {
-          this.updateWebview(webviewPanel, document);
+          this.updateWebview(webviewPanel, document, vcl);
         }
       },
     );
@@ -51,20 +67,19 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
     });
 
     setTimeout(() => {
-      this.updateWebview(webviewPanel, document);
+      this.updateWebview(webviewPanel, document, vcl);
     }, 500);
-
-    // this.updateWebview(webviewPanel, document);
   }
 
   private updateWebview(
     webviewPanel: vscode.WebviewPanel,
     document: vscode.TextDocument,
+    vcl: ComponentLibraryMetaInformation,
   ) {
     console.log("** Updating webview **");
     webviewPanel.webview.postMessage({
       type: "UPDATE_COMMAND",
-      data: this.getDocumentAsJson(document),
+      data: this.getDocumentAsJson(document, vcl),
     });
   }
 
@@ -114,7 +129,8 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
   private editDocument(
     webviewPanel: vscode.WebviewPanel,
     document: vscode.TextDocument,
-    json: any,
+    json: RuiJSONFormat,
+    vcl: ComponentLibraryMetaInformation,
   ) {
     const edit = new vscode.WorkspaceEdit();
 
@@ -131,23 +147,17 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
     vscode.workspace.applyEdit(edit);
 
     // Update the webview
-    this.updateWebview(webviewPanel, document);
+    this.updateWebview(webviewPanel, document, vcl);
 
     console.log("** Updated succesfully **");
   }
 
-  private getDocumentAsJson(document: vscode.TextDocument): any {
+  private getDocumentAsJson(
+    document: vscode.TextDocument,
+    vcl: ComponentLibraryMetaInformation,
+  ): RuiJSONFormat {
     const text = document.getText();
-    if (text.trim().length === 0) {
-      return {};
-    }
 
-    try {
-      return JSON.parse(text);
-    } catch {
-      throw new Error(
-        "Could not get document as json. Content is not valid json",
-      );
-    }
+    return convertRuiToJson(document.fileName, text, vcl);
   }
 }

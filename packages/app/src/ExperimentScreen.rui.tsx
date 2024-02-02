@@ -82,17 +82,14 @@ export const MainScreen = () => {
       properties.Button1 as CProps<"Button">,
       "disabled",
     ),
-    actionList1: composeDataChildren(
-      {},
-      {
-        actions: {
-          action1: Components.Action.produce({
-            ...properties.Action1,
-            ...events.Action1,
-          }),
-        },
+    actionList1: composeDataChildren(Components.ActionList.produce({}), {
+      actions: {
+        action1: Components.Action.produce({
+          ...properties.Action1,
+          ...events.Action1,
+        }),
       },
-    ),
+    }),
   };
 
   return (

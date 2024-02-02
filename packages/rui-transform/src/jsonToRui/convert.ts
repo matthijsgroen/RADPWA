@@ -686,7 +686,7 @@ const writeCompositionTree = (
 const createCommentBlock = (lines: string[]): string =>
   ["*", ...lines.map((l) => `* ${l}`), "*"].join("\n");
 
-export const convertJsonToRui = async (
+export const convertJsonToRui = (
   structure: RuiJSONFormat,
   vcl: ComponentLibraryMetaInformation,
 ): Promise<string> => {

@@ -400,11 +400,11 @@ const extractDataComponent = (
   }
 };
 
-export const convertRuiToJson = async (
+export const convertRuiToJson = (
   fileName: string,
   sourceContents: string,
   vcl: ComponentLibraryMetaInformation,
-): Promise<RuiJSONFormat> => {
+): RuiJSONFormat => {
   // const sourceFile = program.getSourceFile(sourcePath);
   const sourceFile = ts.createSourceFile(
     fileName,
