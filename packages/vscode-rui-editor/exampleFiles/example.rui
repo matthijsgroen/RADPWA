@@ -23,9 +23,14 @@
           {
             "id": "text1",
             "component": "Text",
-            "props": {
-              "content": "Hello world"
-            }
+            "props": [
+              {
+                "content": "Hello world"
+              },
+              {
+                "content2": "Hello world"
+              }
+            ]
           },
           {
             "id": "button1",
@@ -41,7 +46,7 @@
             "id": "button2",
             "component": "Button",
             "props": {
-              "caption": "Disable other"
+              "caption": "Press me"
             },
             "events": {
               "onClick": "button2click"

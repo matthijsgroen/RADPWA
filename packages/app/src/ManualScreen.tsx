@@ -1,9 +1,7 @@
-import { useComponentState } from "~src/components/componentState";
 import { Pane } from "~src/components/Pane";
-import { Button } from "primereact/button";
 import { Panel } from "primereact/panel";
 import { Splitter, SplitterPanel } from "primereact/splitter";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { TabPanel, TabView } from "primereact/tabview";
 import { DataTable } from "primereact/datatable";
 import { Column, ColumnEditorOptions, ColumnEvent } from "primereact/column";
@@ -13,7 +11,6 @@ import { TriStateCheckbox } from "primereact/tristatecheckbox";
 import ComponentTreeView, {
   ComponentTreeNode,
 } from "./components/ComponentTreeView";
-import RuiComponents from "./data/ruiExample.json";
 import {
   processComponentEvents,
   processComponentProps,
@@ -21,6 +18,7 @@ import {
 } from "./utils";
 import { CommandType, useVsCode } from "./hooks/useVsCode";
 import { RuiJSONFormat } from "@rui/transform";
+import { ProgressSpinner } from "primereact/progressspinner";
 
 // Keeping this here for reference
 type PropertyItem = {
@@ -46,28 +44,13 @@ const eventList: PropertyItem[] = [
 ];
 
 const mainScreen = () => {
-  const user = useComponentState<string>("Initial value");
-
   // Only works when the app is running in VSCode
   const { postMessage } = useVsCode();
 
-  const typescriptResult = `
-    import { useComponentState } from "bar";
-    
-    const component = () => {
-        const data = useComponentState<string>("Data");
-
-        return (
-            <div><p>hello: {data}</p></div>
-        );
-    }
-
-    export default component;
-
-  `;
-
   const [selectedComponent, setSelectedComponent] =
     useState<ComponentTreeNode | null>(null);
+
+  const [ruicomponents, setRuiComponents] = useState<RuiJSONFormat>();
 
   const componentPropertyList = processComponentProps(
     selectedComponent?.data?.props,
@@ -77,8 +60,10 @@ const mainScreen = () => {
   );
 
   const onCellEditComplete = (e: ColumnEvent) => {
+    if (e.newValue === e.rowData.value) return;
+
     const newRuiComponents: RuiJSONFormat = JSON.parse(
-      JSON.stringify(RuiComponents),
+      JSON.stringify(ruicomponents),
     );
 
     const isUpdated = updateNestedItemByKey(
@@ -93,6 +78,20 @@ const mainScreen = () => {
     }
   };
 
+  useEffect(() => {
+    window.addEventListener("message", receiveMessage);
+
+    return () => {
+      window.removeEventListener("message", receiveMessage);
+    };
+  }, []);
+
+  const receiveMessage = (event: MessageEvent<any>) => {
+    console.log("** Received message from the extension **", event.data);
+    // Process the JSON data received from the extension
+    setRuiComponents(event.data.data);
+  };
+
   return (
     <Pane>
       <Splitter>
@@ -101,10 +100,14 @@ const mainScreen = () => {
             <SplitterPanel minSize={10}>
               <Pane>
                 <Panel header={"View"}>
-                  <ComponentTreeView
-                    ruiComponents={RuiComponents}
-                    selectedComponent={setSelectedComponent}
-                  />
+                  {ruicomponents ? (
+                    <ComponentTreeView
+                      ruiComponents={ruicomponents}
+                      selectedComponent={setSelectedComponent}
+                    />
+                  ) : (
+                    <ProgressSpinner />
+                  )}
                 </Panel>
               </Pane>
             </SplitterPanel>
@@ -119,6 +122,7 @@ const mainScreen = () => {
                         stripedRows
                         scrollable
                         scrollHeight="100%"
+                        editMode="cell"
                       >
                         <Column field="name" header="Name"></Column>
                         <Column
@@ -189,26 +193,6 @@ const mainScreen = () => {
                   </TabPanel>
                 </TabView>
               </Panel>
-            </SplitterPanel>
-          </Splitter>
-        </SplitterPanel>
-        <SplitterPanel>
-          <Splitter>
-            <SplitterPanel>
-              <Pane>
-                <CodeHighlighter code={typescriptResult} />
-                <p>Center Panel: {user.value}</p>
-                <Button
-                  label={"Demo button"}
-                  onClick={(event: React.MouseEvent): void => {
-                    console.log("Woohoo", user.value);
-                    user.value = "World";
-                  }}
-                />
-              </Pane>
-            </SplitterPanel>
-            <SplitterPanel>
-              <p>Right Panel</p>
             </SplitterPanel>
           </Splitter>
         </SplitterPanel>

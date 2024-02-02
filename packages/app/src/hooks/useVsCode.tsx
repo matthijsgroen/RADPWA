@@ -17,6 +17,7 @@ export const useVsCode = () => {
   // if (!window.vscode) throw new Error("VSCode is not defined");
 
   const postMessage = (message: Command) => {
+    console.log(message);
     window.vscode.postMessage(message);
   };
 

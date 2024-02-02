@@ -6,11 +6,9 @@
     {
       "id": "user",
       "component": "ComponentState",
-      "props": [
-        {
-          "initialValue": "Hello World"
-        }
-      ]
+      "props": {
+        "initialValue": "Hello World"
+      }
     }
   ],
   "composition": [
