@@ -38,11 +38,19 @@ const mainScreen = () => {
   const [componentsStructure, setComponentsStructure] =
     useState<ComponentLibraryMetaInformation>();
 
+  const selectedComponentInfo =
+    selectedComponent && selectedComponent.data && componentsStructure
+      ? componentsStructure[selectedComponent.data.component]
+      : undefined;
+
   const componentPropertyList = processComponentProps(
+    selectedComponent?.key,
     selectedComponent?.data?.props,
+    selectedComponentInfo,
   );
   const componentEventList = processComponentEvents(
     selectedComponent?.data?.events,
+    selectedComponentInfo,
   );
 
   const onCellEditComplete = (e: ColumnEvent) => {
@@ -106,7 +114,7 @@ const mainScreen = () => {
               <Panel header={"Inspector"} className="w-full">
                 <TabView>
                   <TabPanel header="Properties">
-                    {selectedComponent && selectedComponent.data.props && (
+                    {selectedComponentInfo && (
                       <DataTable
                         value={componentPropertyList}
                         size="small"
@@ -152,7 +160,7 @@ const mainScreen = () => {
                     )}
                   </TabPanel>
                   <TabPanel header="Events">
-                    {selectedComponent && selectedComponent.data.events && (
+                    {selectedComponentInfo && (
                       <DataTable
                         value={componentEventList}
                         size="small"

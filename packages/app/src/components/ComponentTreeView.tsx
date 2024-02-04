@@ -1,4 +1,8 @@
-import { RuiJSONFormat, RuiVisualComponent } from "@rui/transform";
+import {
+  RuiDataComponent,
+  RuiJSONFormat,
+  RuiVisualComponent,
+} from "@rui/transform";
 import { Tree } from "primereact/tree";
 import React from "react";
 import { transformToTreeNode } from "~src/utils";
@@ -6,7 +10,7 @@ import { transformToTreeNode } from "~src/utils";
 export type ComponentTreeNode = {
   key: string;
   label: string;
-  data: RuiVisualComponent;
+  data: RuiVisualComponent | RuiDataComponent | null;
   children?: ComponentTreeNode[];
 };
 
@@ -20,8 +24,8 @@ export default function TreeView({
   selectedComponent,
 }: TreeViewProps) {
   const components: ComponentTreeNode[] = transformToTreeNode(
-    ruiComponents.composition,
-  );
+    ruiComponents.components,
+  ).concat(transformToTreeNode(ruiComponents.composition));
 
   return (
     <Tree
