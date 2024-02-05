@@ -4,6 +4,7 @@ body,
   height: 100%;
   padding: 0;
   margin: 0;
+  font-size: 12px;
 }
 
 @layer tailwind-base, primereact, tailwind-utilities;

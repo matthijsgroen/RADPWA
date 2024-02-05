@@ -12,6 +12,7 @@ import ComponentTreeView, {
   ComponentTreeNode,
 } from "./components/ComponentTreeView";
 import {
+  PropertyItem,
   processComponentEvents,
   processComponentProps,
   updateNestedItemByKey,
@@ -19,12 +20,34 @@ import {
 import { CommandType, useVsCode } from "./hooks/useVsCode";
 import { ComponentLibraryMetaInformation, RuiJSONFormat } from "@rui/transform";
 import { ProgressSpinner } from "primereact/progressspinner";
+import { Checkbox } from "primereact/checkbox";
 
 // Keeping this here for reference
-type PropertyItem = {
-  name: string;
-  type: string;
-  value: string | boolean | null | number;
+const isRef = (data: PropertyItem): data is PropertyItem<{ ref: string }> =>
+  data.type.startsWith("ComponentProductRef<");
+
+const stringValue = (data: PropertyItem): React.ReactNode => {
+  if (data.value === undefined) {
+    return "";
+  }
+  if (data.name === "id") {
+    return `${data.value}`;
+  }
+  if (data.type === "string") {
+    return <strong>{`${data.value}`}</strong>;
+  }
+  if (data.type === "boolean") {
+    return <strong>{`${data.value}`}</strong>;
+  }
+
+  if (isRef(data)) {
+    return `${data.value.ref}`;
+  }
+  if (data.type === "function") {
+    return `${data.value}`;
+  }
+
+  return `${data.value} - ${data.type}`;
 };
 
 const mainScreen = () => {
@@ -46,6 +69,7 @@ const mainScreen = () => {
   const componentPropertyList = processComponentProps(
     selectedComponent?.key,
     selectedComponent?.data?.props,
+    selectedComponent?.data?.propsAsState ?? [],
     selectedComponentInfo,
   );
   const componentEventList = processComponentEvents(
@@ -54,12 +78,14 @@ const mainScreen = () => {
   );
 
   const onCellEditComplete = (e: ColumnEvent) => {
+    console.log("new value: ", e.newValue);
     if (e.newValue === e.rowData.value) return;
 
     const newRuiComponents: RuiJSONFormat = JSON.parse(
       JSON.stringify(screenStructure),
     );
 
+    // TODO: Replace with 'immer'
     const isUpdated = updateNestedItemByKey(
       newRuiComponents,
       e.rowData.name,
@@ -68,7 +94,7 @@ const mainScreen = () => {
 
     if (isUpdated) {
       console.log("** Sending updated JSON to the extension **");
-      postMessage({ type: CommandType.EDIT_COMMAND, data: newRuiComponents });
+      // postMessage({ type: CommandType.EDIT_COMMAND, data: newRuiComponents });
     }
   };
 
@@ -88,6 +114,49 @@ const mainScreen = () => {
     }
     if (event.data.type === "UPDATE_COMPONENTS") {
       setComponentsStructure(event.data.data);
+    }
+  };
+  const propertyEdit = (options: ColumnEditorOptions) => {
+    if (options.rowData.type === "string") {
+      const value = {
+        value: options.rowData.value,
+        exposedAsState: options.rowData.exposedAsState,
+        ...options.value,
+      };
+      return (
+        <>
+          <InputText
+            value={value.value}
+            onChange={(e) =>
+              options.editorCallback!({
+                ...value,
+                value: e.target.value,
+              })
+            }
+          />
+          <br />
+          <label>
+            expose as state:
+            <Checkbox
+              checked={value.exposedAsState}
+              onChange={(e) =>
+                options.editorCallback!({
+                  ...value,
+                  exposedAsState: !!e.target.checked,
+                })
+              }
+            />
+          </label>
+        </>
+      );
+    }
+    if (options.rowData.type === "boolean") {
+      return (
+        <TriStateCheckbox
+          value={options.value}
+          onChange={(e) => options.editorCallback!(e.target.value)}
+        />
+      );
     }
   };
 
@@ -125,35 +194,10 @@ const mainScreen = () => {
                       >
                         <Column field="name" header="Name"></Column>
                         <Column
-                          field="value"
+                          // field="value"
                           header="Value"
-                          body={(data) =>
-                            data.type === "string"
-                              ? data.value
-                              : `${data.value}`
-                          }
-                          editor={(options: ColumnEditorOptions) => {
-                            if (options.rowData.type === "string") {
-                              return (
-                                <InputText
-                                  value={options.value}
-                                  onChange={(e) =>
-                                    options.editorCallback!(e.target.value)
-                                  }
-                                />
-                              );
-                            }
-                            if (options.rowData.type === "boolean") {
-                              return (
-                                <TriStateCheckbox
-                                  value={options.value}
-                                  onChange={(e) =>
-                                    options.editorCallback!(e.target.value)
-                                  }
-                                />
-                              );
-                            }
-                          }}
+                          body={(data) => stringValue(data)}
+                          editor={propertyEdit}
                           onCellEditComplete={onCellEditComplete}
                         ></Column>
                       </DataTable>
@@ -170,21 +214,10 @@ const mainScreen = () => {
                       >
                         <Column field="name" header="Name"></Column>
                         <Column
-                          field="value"
+                          // field="value"
                           header="Value"
-                          body={(data) =>
-                            data.type === "string"
-                              ? data.value
-                              : `${data.value}`
-                          }
-                          editor={(options: ColumnEditorOptions) => (
-                            <InputText
-                              value={options.value}
-                              onChange={(e) =>
-                                options.editorCallback!(e.target.value)
-                              }
-                            />
-                          )}
+                          body={(data) => stringValue(data)}
+                          editor={propertyEdit}
                           onCellEditComplete={onCellEditComplete}
                         ></Column>
                       </DataTable>
