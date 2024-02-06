@@ -6,7 +6,6 @@ import { TabPanel, TabView } from "primereact/tabview";
 import { DataTable } from "primereact/datatable";
 import { Column, ColumnEditorOptions, ColumnEvent } from "primereact/column";
 import { InputText } from "primereact/inputtext";
-import { CodeHighlighter } from "./components/CodePreview";
 import { TriStateCheckbox } from "primereact/tristatecheckbox";
 import ComponentTreeView, {
   ComponentTreeNode,
@@ -15,12 +14,12 @@ import {
   PropertyItem,
   processComponentEvents,
   processComponentProps,
-  updateNestedItemByKey,
 } from "./utils";
 import { CommandType, useVsCode } from "./hooks/useVsCode";
 import { ComponentLibraryMetaInformation, RuiJSONFormat } from "@rui/transform";
 import { ProgressSpinner } from "primereact/progressspinner";
 import { Checkbox } from "primereact/checkbox";
+import { produce } from "immer";
 
 // Keeping this here for reference
 const isRef = (data: PropertyItem): data is PropertyItem<{ ref: string }> =>
@@ -85,17 +84,31 @@ const mainScreen = () => {
       JSON.stringify(screenStructure),
     );
 
-    // TODO: Replace with 'immer'
-    const isUpdated = updateNestedItemByKey(
-      newRuiComponents,
-      e.rowData.name,
-      e.newValue,
-    );
+    const updatedRuiJson = produce(newRuiComponents, (draft) => {
+      const component = draft.composition.find((c) => c.id === e.rowData.name);
+      if (!component) return;
 
-    if (isUpdated) {
-      console.log("** Sending updated JSON to the extension **");
-      // postMessage({ type: CommandType.EDIT_COMMAND, data: newRuiComponents });
-    }
+      // TODO: Either edit the prop or event based on id. Can be a
+      // Record<string, any> or Record<string, any>[]
+
+      // Add or remove the value as state if the user has checked/unchecked the
+      // checkbox
+      if (e.newValue.exposedAsState) {
+        draft.components.push({
+          id: component.id,
+          component: "ComponentState",
+          props: {
+            initialValue: e.newValue,
+          },
+        });
+      } else {
+        const index = draft.components.findIndex((c) => c.id === component.id);
+        if (index !== -1) draft.components.splice(index, 1);
+      }
+    });
+
+    console.log("** Sending updated JSON to the extension **");
+    postMessage({ type: CommandType.EDIT_COMMAND, data: updatedRuiJson });
   };
 
   useEffect(() => {

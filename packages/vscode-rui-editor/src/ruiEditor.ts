@@ -6,6 +6,7 @@ import {
   type RuiJSONFormat,
   convertRuiToJson,
   getProjectComponentsFromType,
+  convertJsonToRui,
 } from "@rui/transform";
 
 export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
@@ -28,7 +29,7 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
     _token: vscode.CancellationToken,
   ): void | Thenable<void> {
     // Open the document editor and custom text editor side by side
-    // vscode.window.showTextDocument(document, vscode.ViewColumn.Beside);
+    vscode.window.showTextDocument(document, vscode.ViewColumn.Beside);
 
     vscode.workspace
       .findFiles("rapid-components.tsx", undefined, 1)
@@ -59,12 +60,13 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
         );
 
         // Receive message from the webview.
-        webviewPanel.webview.onDidReceiveMessage((message) => {
+        webviewPanel.webview.onDidReceiveMessage(async (message) => {
           switch (message.type.toString()) {
             case "EDIT_COMMAND":
               const receivedData = message.data;
               console.log("** Received updated JSON from the webview **");
-              this.editDocument(webviewPanel, document, receivedData, vcl);
+              const Rui = await convertJsonToRui(receivedData, vcl);
+              this.editDocument(webviewPanel, document, Rui, vcl);
               return;
           }
         });
@@ -149,7 +151,7 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
   private editDocument(
     webviewPanel: vscode.WebviewPanel,
     document: vscode.TextDocument,
-    json: RuiJSONFormat,
+    Rui: string,
     vcl: ComponentLibraryMetaInformation,
   ) {
     const edit = new vscode.WorkspaceEdit();
@@ -160,7 +162,7 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
     edit.replace(
       document.uri,
       new vscode.Range(0, 0, document.lineCount, 0),
-      JSON.stringify(json, null, 2),
+      Rui,
     );
 
     // Apply the edits

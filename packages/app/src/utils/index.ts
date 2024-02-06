@@ -87,32 +87,3 @@ export const transformToTreeNode = (
     return treeNode;
   });
 };
-
-// Recursively update the component tree by finding the component with the
-// matching id and updating the component properties
-export const updateNestedItemByKey = (
-  obj: Record<string, any>,
-  keyToUpdate: string,
-  newValue: string,
-) => {
-  let updated = false;
-
-  const updateItem = (item: Record<string, any>, key: string) => {
-    if (item.hasOwnProperty(key)) {
-      item[key] = newValue; // Update the value
-      updated = true;
-      return true; // Stops the search after updating
-    }
-
-    if (typeof item === "object" && item !== null) {
-      for (const key of Object.keys(item)) {
-        if (updateItem(item[key], keyToUpdate)) {
-          break; // Breaks the loop if the key is found and updated in a nested object
-        }
-      }
-    }
-  };
-
-  updateItem(obj, keyToUpdate);
-  return updated;
-};
