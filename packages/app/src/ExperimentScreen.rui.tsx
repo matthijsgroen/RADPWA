@@ -30,7 +30,6 @@ export type Scope = {
       action1: TAction;
     };
   };
-} & {
   readonly text1: {
     content?: string;
   };
