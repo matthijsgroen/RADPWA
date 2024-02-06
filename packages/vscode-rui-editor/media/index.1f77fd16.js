@@ -1,0 +1,1 @@
+../../app/dist/index.1f77fd16.js
