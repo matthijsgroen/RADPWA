@@ -16,99 +16,105 @@ import {
   processComponentProps,
 } from "./utils";
 import { CommandType, useVsCode } from "./hooks/useVsCode";
-import { ComponentLibraryMetaInformation, RuiJSONFormat } from "@rui/transform";
+import {
+  ComponentLibraryMetaInformation,
+  RuiDataComponent,
+  RuiJSONFormat,
+  RuiVisualComponent,
+} from "@rui/transform";
 import { ProgressSpinner } from "primereact/progressspinner";
 import { Checkbox } from "primereact/checkbox";
-import { produce } from "immer";
+import { updateProperty } from "./mutations/updateProperty";
+import { treeSearch } from "./mutations/treeSearch";
 
 // Keeping this here for reference
 const isRef = (data: PropertyItem): data is PropertyItem<{ ref: string }> =>
   data.type.startsWith("ComponentProductRef<");
 
 const stringValue = (data: PropertyItem): React.ReactNode => {
-  if (data.value === undefined) {
-    return "";
-  }
+  const stateMarker = data.exposedAsState ? "🗒️ " : "";
   if (data.name === "id") {
     return `${data.value}`;
   }
+  if (data.value === undefined) {
+    return `${stateMarker}`;
+  }
   if (data.type === "string") {
-    return <strong>{`${data.value}`}</strong>;
+    return (
+      <strong>
+        {stateMarker}
+        {`${data.value}`}
+      </strong>
+    );
   }
   if (data.type === "boolean") {
-    return <strong>{`${data.value}`}</strong>;
+    return (
+      <strong>
+        {stateMarker}
+        {`${data.value}`}
+      </strong>
+    );
   }
 
   if (isRef(data)) {
-    return `${data.value.ref}`;
+    return `${stateMarker}${data.value.ref}`;
   }
   if (data.type === "function") {
-    return `${data.value}`;
+    return `${stateMarker}${data.value}`;
   }
 
-  return `${data.value} - ${data.type}`;
+  return `${stateMarker}${data.value} - ${data.type}`;
 };
 
 const mainScreen = () => {
   // Only works when the app is running in VSCode
   const { postMessage } = useVsCode();
 
-  const [selectedComponent, setSelectedComponent] =
-    useState<ComponentTreeNode | null>(null);
+  const [selectedComponentId, setSelectedComponent] = useState<string | null>(
+    null,
+  );
 
   const [screenStructure, setScreenStructure] = useState<RuiJSONFormat>();
   const [componentsStructure, setComponentsStructure] =
     useState<ComponentLibraryMetaInformation>();
 
-  const selectedComponentInfo =
-    selectedComponent && selectedComponent.data && componentsStructure
-      ? componentsStructure[selectedComponent.data.component]
+  const selectedComponent: RuiVisualComponent | RuiDataComponent | undefined =
+    selectedComponentId
+      ? treeSearch(selectedComponentId, screenStructure?.components ?? []) ||
+        treeSearch(selectedComponentId, screenStructure?.composition ?? [])
       : undefined;
 
-  const componentPropertyList = processComponentProps(
-    selectedComponent?.key,
-    selectedComponent?.data?.props,
-    selectedComponent?.data?.propsAsState ?? [],
-    selectedComponentInfo,
-  );
-  const componentEventList = processComponentEvents(
-    selectedComponent?.data?.events,
-    selectedComponentInfo,
-  );
+  const selectedComponentInfo =
+    selectedComponent && componentsStructure
+      ? componentsStructure[selectedComponent.component]
+      : undefined;
+
+  const componentPropertyList = selectedComponent
+    ? processComponentProps(
+        selectedComponent.id,
+        selectedComponent.props,
+        selectedComponent.propsAsState ?? [],
+        selectedComponentInfo,
+      )
+    : [];
+  const componentEventList = selectedComponent
+    ? processComponentEvents(selectedComponent.events, selectedComponentInfo)
+    : [];
 
   const onCellEditComplete = (e: ColumnEvent) => {
     console.log("new value: ", e.newValue);
-    if (e.newValue === e.rowData.value) return;
+    if (selectedComponent === undefined) return;
 
-    const newRuiComponents: RuiJSONFormat = JSON.parse(
-      JSON.stringify(screenStructure),
-    );
+    const updatedRuiJson = updateProperty(
+      e,
+      selectedComponent.id,
+      selectedComponentInfo,
+    )(screenStructure);
 
-    const updatedRuiJson = produce(newRuiComponents, (draft) => {
-      const component = draft.composition.find((c) => c.id === e.rowData.name);
-      if (!component) return;
-
-      // TODO: Either edit the prop or event based on id. Can be a
-      // Record<string, any> or Record<string, any>[]
-
-      // Add or remove the value as state if the user has checked/unchecked the
-      // checkbox
-      if (e.newValue.exposedAsState) {
-        draft.components.push({
-          id: component.id,
-          component: "ComponentState",
-          props: {
-            initialValue: e.newValue,
-          },
-        });
-      } else {
-        const index = draft.components.findIndex((c) => c.id === component.id);
-        if (index !== -1) draft.components.splice(index, 1);
-      }
-    });
-
-    console.log("** Sending updated JSON to the extension **");
-    postMessage({ type: CommandType.EDIT_COMMAND, data: updatedRuiJson });
+    if (updatedRuiJson !== screenStructure) {
+      console.log("** Sending updated JSON to the extension **");
+      postMessage({ type: CommandType.EDIT_COMMAND, data: updatedRuiJson });
+    }
   };
 
   useEffect(() => {
@@ -164,11 +170,36 @@ const mainScreen = () => {
       );
     }
     if (options.rowData.type === "boolean") {
+      const value = {
+        value: options.rowData.value,
+        exposedAsState: options.rowData.exposedAsState,
+        ...options.value,
+      };
       return (
-        <TriStateCheckbox
-          value={options.value}
-          onChange={(e) => options.editorCallback!(e.target.value)}
-        />
+        <>
+          <TriStateCheckbox
+            value={options.value}
+            onChange={(e) =>
+              options.editorCallback!({
+                ...value,
+                value: e.target.value,
+              })
+            }
+          />
+          <br />
+          <label>
+            expose as state:
+            <Checkbox
+              checked={value.exposedAsState}
+              onChange={(e) =>
+                options.editorCallback!({
+                  ...value,
+                  exposedAsState: !!e.target.checked,
+                })
+              }
+            />
+          </label>
+        </>
       );
     }
   };

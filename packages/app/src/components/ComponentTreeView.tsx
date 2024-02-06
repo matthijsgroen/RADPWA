@@ -16,7 +16,7 @@ export type ComponentTreeNode = {
 
 type TreeViewProps = {
   ruiComponents: RuiJSONFormat;
-  selectedComponent: (e: ComponentTreeNode) => void;
+  selectedComponent: (e: string | null) => void;
 };
 
 export default function TreeView({
@@ -31,7 +31,7 @@ export default function TreeView({
     <Tree
       value={components}
       selectionMode="single"
-      onSelect={(e) => selectedComponent(e.node as ComponentTreeNode)}
+      onSelect={(e) => selectedComponent(e.node.key ? `${e.node.key}` : null)}
     />
   );
 }

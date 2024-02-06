@@ -13,8 +13,8 @@ export type RuiVisualComponent = {
   id: string;
   component: string;
 
-  props?: Record<string, any> | Record<string, any>[];
-  events?: Record<string, any> | Record<string, any>[];
+  props?: Record<string, any>;
+  events?: Record<string, any>;
   propsAsState?: string[];
   childContainers?: Record<string, RuiVisualComponent[]>;
 };
