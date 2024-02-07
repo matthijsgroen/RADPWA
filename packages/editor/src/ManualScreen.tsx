@@ -215,8 +215,6 @@ const mainScreen = () => {
 
   return (
     <Pane>
-      <Splitter>
-        <SplitterPanel minSize={20}>
           <Splitter layout={"horizontal"}>
             <SplitterPanel minSize={10}>
               <Pane>
@@ -296,8 +294,6 @@ const mainScreen = () => {
                   </TabPanel>
                 </TabView>
               </Panel>
-            </SplitterPanel>
-          </Splitter>
         </SplitterPanel>
       </Splitter>
     </Pane>
