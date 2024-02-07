@@ -1317,6 +1317,24 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@rui/editor@workspace:packages/editor":
+  version: 0.0.0-use.local
+  resolution: "@rui/editor@workspace:packages/editor"
+  dependencies:
+    "@rui/prime-react": "workspace:^"
+    "@rui/transform": "workspace:^"
+    "@types/react-dom": "npm:^18.2.18"
+    highlight.js: "npm:^11.9.0"
+    immer: "npm:^10.0.3"
+    parcel: "npm:^2.11.0"
+    postcss: "npm:^8.4.33"
+    primereact: "npm:^10.3.1"
+    react: "npm:^18.2.0"
+    react-dom: "npm:^18.2.0"
+    tailwindcss: "npm:^3.4.1"
+  languageName: unknown
+  linkType: soft
+
 "@rui/prime-react@workspace:^, @rui/prime-react@workspace:packages/rui-prime-react":
   version: 0.0.0-use.local
   resolution: "@rui/prime-react@workspace:packages/rui-prime-react"
@@ -1778,7 +1796,9 @@ __metadata:
   dependencies:
     "@parcel/packager-ts": "npm:^2.11.0"
     "@parcel/transformer-typescript-types": "npm:^2.11.0"
+    events: "npm:^3.1.0"
     nx: "npm:17.2.8"
+    path-browserify: "npm:^1.0.0"
     process: "npm:^0.11.10"
     typescript: "npm:^5.3.3"
   languageName: unknown
@@ -2823,6 +2843,13 @@ __metadata:
   version: 2.0.3
   resolution: "esutils@npm:2.0.3"
   checksum: 10c0/9a2fe69a41bfdade834ba7c42de4723c97ec776e40656919c62cbd13607c45e127a003f05f724a1ea55e5029a4cf2de444b13009f2af71271e42d93a637137c7
+  languageName: node
+  linkType: hard
+
+"events@npm:^3.1.0":
+  version: 3.3.0
+  resolution: "events@npm:3.3.0"
+  checksum: 10c0/d6b6f2adbccbcda74ddbab52ed07db727ef52e31a61ed26db9feb7dc62af7fc8e060defa65e5f8af9449b86b52cc1a1f6a79f2eafcf4e62add2b7a1fa4a432f6
   languageName: node
   linkType: hard
 
@@ -4580,6 +4607,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"path-browserify@npm:^1.0.0":
+  version: 1.0.1
+  resolution: "path-browserify@npm:1.0.1"
+  checksum: 10c0/8b8c3fd5c66bd340272180590ae4ff139769e9ab79522e2eb82e3d571a89b8117c04147f65ad066dccfb42fcad902e5b7d794b3d35e0fd840491a8ddbedf8c66
+  languageName: node
+  linkType: hard
+
 "path-exists@npm:^4.0.0":
   version: 4.0.0
   resolution: "path-exists@npm:4.0.0"
@@ -5371,24 +5405,6 @@ __metadata:
   checksum: 10c0/3c3b8aa8f34d661910563ff996412e2f527fc814e699a376854b554d4a4294ab7e285b4e2c08a080a7b19c5600a9b93a98798d3ac600fe3de545ca6605c07829
   languageName: node
   linkType: hard
-
-"studio@workspace:packages/app":
-  version: 0.0.0-use.local
-  resolution: "studio@workspace:packages/app"
-  dependencies:
-    "@rui/prime-react": "workspace:^"
-    "@rui/transform": "workspace:^"
-    "@types/react-dom": "npm:^18.2.18"
-    highlight.js: "npm:^11.9.0"
-    immer: "npm:^10.0.3"
-    parcel: "npm:^2.11.0"
-    postcss: "npm:^8.4.33"
-    primereact: "npm:^10.3.1"
-    react: "npm:^18.2.0"
-    react-dom: "npm:^18.2.0"
-    tailwindcss: "npm:^3.4.1"
-  languageName: unknown
-  linkType: soft
 
 "sucrase@npm:^3.32.0":
   version: 3.35.0

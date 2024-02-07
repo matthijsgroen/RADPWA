@@ -206,6 +206,7 @@ const mainScreen = () => {
     <Pane>
       <Splitter>
         <SplitterPanel minSize={20}>
+          dsdssd
           <Splitter layout={"vertical"}>
             <SplitterPanel minSize={10}>
               <Pane>
