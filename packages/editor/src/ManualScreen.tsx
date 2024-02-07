@@ -206,7 +206,6 @@ const mainScreen = () => {
     <Pane>
       <Splitter>
         <SplitterPanel minSize={20}>
-          dsdssd
           <Splitter layout={"vertical"}>
             <SplitterPanel minSize={10}>
               <Pane>
@@ -275,21 +274,6 @@ const mainScreen = () => {
               </Panel>
             </SplitterPanel>
           </Splitter>
-        </SplitterPanel>
-        <SplitterPanel>
-          <Pane>
-            <Panel header={"Components"}>
-              {componentsStructure ? (
-                <ul>
-                  {Object.entries(componentsStructure).map(([k, _v]) => (
-                    <li key={k}>{k}</li>
-                  ))}
-                </ul>
-              ) : (
-                <ProgressSpinner />
-              )}
-            </Panel>
-          </Pane>
         </SplitterPanel>
       </Splitter>
     </Pane>

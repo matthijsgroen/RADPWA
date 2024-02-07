@@ -110,7 +110,7 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
       vscode.Uri.joinPath(
         this.context.extensionUri,
         "media",
-        "index.1f77fd16.js",
+        "index.e3dcddad.js",
       ),
     );
 
@@ -118,7 +118,7 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
       vscode.Uri.joinPath(
         this.context.extensionUri,
         "media",
-        "index.d82e8cfa.css",
+        "index.6fc39b01.css",
       ),
     );
 
