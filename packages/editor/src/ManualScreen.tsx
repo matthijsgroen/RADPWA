@@ -3,10 +3,8 @@ import { Panel } from "primereact/panel";
 import { Splitter, SplitterPanel } from "primereact/splitter";
 import React, { useEffect, useState } from "react";
 import { TabPanel, TabView } from "primereact/tabview";
-import { DataTable } from "primereact/datatable";
-import { Column, ColumnEditorOptions, ColumnEvent } from "primereact/column";
-import { InputText } from "primereact/inputtext";
-import { TriStateCheckbox } from "primereact/tristatecheckbox";
+import { DataTable, DataTableRowEditCompleteEvent } from "primereact/datatable";
+import { Column, ColumnEvent } from "primereact/column";
 import ComponentTreeView from "./components/ComponentTreeView";
 import {
   PropertyItem,
@@ -17,13 +15,17 @@ import { CommandType, useVsCode } from "./hooks/useVsCode";
 import {
   ComponentLibraryMetaInformation,
   RuiDataComponent,
+  RuiDependency,
   RuiJSONFormat,
   RuiVisualComponent,
 } from "@rui/transform";
 import { ProgressSpinner } from "primereact/progressspinner";
-import { Checkbox } from "primereact/checkbox";
 import { updateProperty } from "./mutations/updateProperty";
 import { treeSearch } from "./mutations/treeSearch";
+import { CodeHighlighter } from "./components/CodePreview";
+import { propertyEdit } from "./propertyEdit";
+import { cellBooleanEditor, cellTextEditor } from "./cellEditors";
+import { updateInterface } from "./mutations/updateInterface";
 
 // Keeping this here for reference
 const isRef = (data: PropertyItem): data is PropertyItem<{ ref: string }> =>
@@ -101,18 +103,20 @@ const mainScreen = () => {
     : [];
   const componentInterfaceList: {
     name: string;
-    type: string;
+    type: {
+      name: string;
+      dependencies: RuiDependency[];
+    };
     optional: boolean;
   }[] = Object.entries(screenStructure?.interface ?? {}).map(
     ([name, value]) => ({
       name,
-      type: value.type,
+      type: { name: value.type, dependencies: value.dependencies },
       optional: value.optional,
     }),
   );
 
   const onCellEditComplete = (e: ColumnEvent) => {
-    console.log("new value: ", e.newValue);
     if (selectedComponent === undefined) return;
 
     const updatedRuiJson = updateProperty(
@@ -148,157 +152,114 @@ const mainScreen = () => {
       setComponentsStructure(event.data.data);
     }
   };
-  const propertyEdit = (options: ColumnEditorOptions) => {
-    if (options.rowData.type === "string") {
-      const value = {
-        value: options.rowData.value,
-        exposedAsState: options.rowData.exposedAsState,
-        ...options.value,
-      };
-      return (
-        <>
-          <InputText
-            value={value.value}
-            onChange={(e) =>
-              options.editorCallback!({
-                ...value,
-                value: e.target.value,
-              })
-            }
-          />
-          <br />
-          <label>
-            expose as state:
-            <Checkbox
-              checked={value.exposedAsState}
-              onChange={(e) =>
-                options.editorCallback!({
-                  ...value,
-                  exposedAsState: !!e.target.checked,
-                })
-              }
-            />
-          </label>
-        </>
-      );
-    }
-    if (options.rowData.type === "boolean") {
-      const value = {
-        value: options.rowData.value,
-        exposedAsState: options.rowData.exposedAsState,
-        ...options.value,
-      };
-      return (
-        <>
-          <TriStateCheckbox
-            value={options.value}
-            onChange={(e) =>
-              options.editorCallback!({
-                ...value,
-                value: e.target.value,
-              })
-            }
-          />
-          <br />
-          <label>
-            expose as state:
-            <Checkbox
-              checked={value.exposedAsState}
-              onChange={(e) =>
-                options.editorCallback!({
-                  ...value,
-                  exposedAsState: !!e.target.checked,
-                })
-              }
-            />
-          </label>
-        </>
-      );
+
+  const updateInterfaceProperty = (
+    event: DataTableRowEditCompleteEvent,
+  ): void => {
+    const updatedRuiJson = updateInterface(event)(screenStructure);
+
+    if (updatedRuiJson !== screenStructure) {
+      console.log("** Sending updated JSON to the extension **");
+      postMessage({ type: CommandType.EDIT_COMMAND, data: updatedRuiJson });
     }
   };
 
   return (
     <Pane>
-          <Splitter layout={"horizontal"}>
-            <SplitterPanel minSize={10}>
-              <Pane>
-                <Panel header={"View"}>
-                  <TabView>
-                    <TabPanel header="Structure">
-                      {screenStructure ? (
-                        <ComponentTreeView
-                          ruiComponents={screenStructure}
-                          selectedComponent={setSelectedComponent}
-                        />
-                      ) : (
-                        <ProgressSpinner />
-                      )}
-                    </TabPanel>
-                    <TabPanel header="Interface">
-                      <DataTable
-                        value={componentInterfaceList}
-                        size="small"
-                        stripedRows
-                        scrollable
-                        scrollHeight="100%"
-                        editMode="cell"
-                      >
-                        <Column field="name" header="Name"></Column>
-                        <Column field="type" header="Type"></Column>
-                        <Column field="optional" header="Optional"></Column>
-                      </DataTable>
+      <Splitter layout={"horizontal"}>
+        <SplitterPanel minSize={10}>
+          <Pane>
+            <Panel header={"View"}>
+              <TabView>
+                <TabPanel header="Structure">
+                  {screenStructure ? (
+                    <ComponentTreeView
+                      ruiComponents={screenStructure}
+                      selectedComponent={setSelectedComponent}
+                    />
+                  ) : (
+                    <ProgressSpinner />
+                  )}
+                </TabPanel>
+                <TabPanel header="Interface">
+                  <DataTable
+                    value={componentInterfaceList}
+                    size="small"
+                    stripedRows
+                    scrollable
+                    scrollHeight="100%"
+                    editMode="row"
+                    onRowEditComplete={updateInterfaceProperty}
+                  >
+                    <Column
+                      field="name"
+                      header="Name"
+                      editor={(options) => cellTextEditor(options)}
+                    ></Column>
+                    <Column
+                      field="type"
+                      header="Type"
+                      body={(e) => e.type.name}
+                    ></Column>
+                    <Column
+                      field="optional"
+                      header="Optional"
+                      editor={(options) => cellBooleanEditor(options)}
+                    ></Column>
+                    <Column rowEditor={true}></Column>
+                  </DataTable>
                   <CodeHighlighter code={scopeType} />
-                    </TabPanel>
-                  </TabView>
-                </Panel>
-              </Pane>
-            </SplitterPanel>
-            <SplitterPanel>
-              <Panel header={"Inspector"} className="w-full">
-                <TabView>
-                  <TabPanel header="Properties">
-                    {selectedComponentInfo && (
-                      <DataTable
-                        value={componentPropertyList}
-                        size="small"
-                        stripedRows
-                        scrollable
-                        scrollHeight="100%"
-                        editMode="cell"
-                      >
-                        <Column field="name" header="Name"></Column>
-                        <Column
-                          // field="value"
-                          header="Value"
-                          body={(data) => stringValue(data)}
-                          editor={propertyEdit}
-                          onCellEditComplete={onCellEditComplete}
-                        ></Column>
-                      </DataTable>
-                    )}
-                  </TabPanel>
-                  <TabPanel header="Events">
-                    {selectedComponentInfo && (
-                      <DataTable
-                        value={componentEventList}
-                        size="small"
-                        stripedRows
-                        scrollable
-                        scrollHeight="100%"
-                      >
-                        <Column field="name" header="Name"></Column>
-                        <Column
-                          // field="value"
-                          header="Value"
-                          body={(data) => stringValue(data)}
-                          editor={propertyEdit}
-                          onCellEditComplete={onCellEditComplete}
-                        ></Column>
-                      </DataTable>
-                    )}
-                  </TabPanel>
-                </TabView>
-              </Panel>
+                </TabPanel>
+              </TabView>
+            </Panel>
+          </Pane>
+        </SplitterPanel>
+        <SplitterPanel>
+          <Panel header={"Inspector"} className="w-full">
+            <TabView>
+              <TabPanel header="Properties">
+                {selectedComponentInfo && (
+                  <DataTable
+                    value={componentPropertyList}
+                    size="small"
+                    stripedRows
+                    scrollable
+                    scrollHeight="100%"
+                    editMode="cell"
+                  >
+                    <Column field="name" header="Name"></Column>
+                    <Column
+                      // field="value"
+                      header="Value"
+                      body={(data) => stringValue(data)}
+                      editor={propertyEdit}
+                      onCellEditComplete={onCellEditComplete}
+                    ></Column>
+                  </DataTable>
+                )}
+              </TabPanel>
+              <TabPanel header="Events">
+                {selectedComponentInfo && (
+                  <DataTable
+                    value={componentEventList}
+                    size="small"
+                    stripedRows
+                    scrollable
+                    scrollHeight="100%"
+                  >
+                    <Column field="name" header="Name"></Column>
+                    <Column
+                      // field="value"
+                      header="Value"
+                      body={(data) => stringValue(data)}
+                      editor={propertyEdit}
+                      onCellEditComplete={onCellEditComplete}
+                    ></Column>
+                  </DataTable>
+                )}
+              </TabPanel>
+            </TabView>
+          </Panel>
         </SplitterPanel>
       </Splitter>
     </Pane>
