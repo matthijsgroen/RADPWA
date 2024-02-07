@@ -6,6 +6,7 @@ import { TabPanel, TabView } from "primereact/tabview";
 import { DataTable, DataTableRowEditCompleteEvent } from "primereact/datatable";
 import { Column, ColumnEvent } from "primereact/column";
 import ComponentTreeView from "./components/ComponentTreeView";
+import { PrimeIcons } from "primereact/api";
 import {
   PropertyItem,
   processComponentEvents,
@@ -26,6 +27,7 @@ import { CodeHighlighter } from "./components/CodePreview";
 import { propertyEdit } from "./propertyEdit";
 import { cellBooleanEditor, cellTextEditor } from "./cellEditors";
 import { updateInterface } from "./mutations/updateInterface";
+import { Button } from "primereact/button";
 
 // Keeping this here for reference
 const isRef = (data: PropertyItem): data is PropertyItem<{ ref: string }> =>
@@ -208,6 +210,13 @@ const mainScreen = () => {
                     ></Column>
                     <Column rowEditor={true}></Column>
                   </DataTable>
+                  <div className="flex flex-wrap justify-content-center gap-3 my-4">
+                    <Button
+                      rounded
+                      icon={PrimeIcons.PLUS}
+                      aria-label="Add interface property"
+                    />
+                  </div>
                   <CodeHighlighter code={scopeType} />
                 </TabPanel>
               </TabView>
