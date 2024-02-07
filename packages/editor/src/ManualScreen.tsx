@@ -98,6 +98,17 @@ const mainScreen = () => {
   const componentEventList = selectedComponent
     ? processComponentEvents(selectedComponent.events, selectedComponentInfo)
     : [];
+  const componentInterfaceList: {
+    name: string;
+    type: string;
+    optional: boolean;
+  }[] = Object.entries(screenStructure?.interface ?? {}).map(
+    ([name, value]) => ({
+      name,
+      type: value.type,
+      optional: value.optional,
+    }),
+  );
 
   const onCellEditComplete = (e: ColumnEvent) => {
     console.log("new value: ", e.newValue);
@@ -221,7 +232,20 @@ const mainScreen = () => {
                         <ProgressSpinner />
                       )}
                     </TabPanel>
-                    <TabPanel header="Interface"></TabPanel>
+                    <TabPanel header="Interface">
+                      <DataTable
+                        value={componentInterfaceList}
+                        size="small"
+                        stripedRows
+                        scrollable
+                        scrollHeight="100%"
+                        editMode="cell"
+                      >
+                        <Column field="name" header="Name"></Column>
+                        <Column field="type" header="Type"></Column>
+                        <Column field="optional" header="Optional"></Column>
+                      </DataTable>
+                    </TabPanel>
                   </TabView>
                 </Panel>
               </Pane>
