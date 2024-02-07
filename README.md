@@ -24,7 +24,7 @@ yarn install
 yarn build
 
 # in first terminal
-cd packages/app
+cd packages/editor
 yarn watch
 
 # in second terminal
