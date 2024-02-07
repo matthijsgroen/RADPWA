@@ -1,13 +1,13 @@
-import ts from "typescript";
+import ts, { createPrinter } from "typescript";
 import {
   ComponentLibraryMetaInformation,
   RuiDataComponent,
   RuiJSONFormat,
+  RuiTypeDeclaration,
   RuiVisualComponent,
 } from "../compiler-types";
 import { capitalize, uncapitalize } from "../string-utils";
 import { valueToJSON } from "../value-utils";
-import { program } from "commander";
 
 const getPropertiesFor = (
   properties: ts.ObjectLiteralExpression | undefined,
@@ -400,6 +400,38 @@ const extractDataComponent = (
   }
 };
 
+const extractInterface = (
+  interfaceDefinition: ts.TypeLiteralNode | undefined,
+  context: ExtractionContext,
+): Record<string, RuiTypeDeclaration> => {
+  if (interfaceDefinition === undefined) {
+    return {};
+  }
+  const printer = createPrinter();
+  // TODO enrich types also with descriptions from JSDoc
+
+  const result: Record<string, RuiTypeDeclaration> = {};
+  for (const member of interfaceDefinition.members) {
+    if (
+      ts.isPropertySignature(member) &&
+      ts.isIdentifier(member.name) &&
+      member.type
+    ) {
+      result[member.name.text] = {
+        type: printer.printNode(
+          ts.EmitHint.Unspecified,
+          member.type,
+          context.sourceFile,
+        ),
+        optional: member.questionToken !== undefined,
+        dependencies: [],
+      };
+    }
+  }
+
+  return result;
+};
+
 export const convertRuiToJson = (
   fileName: string,
   sourceContents: string,
@@ -416,6 +448,7 @@ export const convertRuiToJson = (
       componentLibrary: "",
       eventHandlers: "",
       id: "NewScreen",
+      interface: {},
       components: [],
       composition: [],
     };
@@ -425,6 +458,7 @@ export const convertRuiToJson = (
   let component = undefined as ts.ArrowFunction | undefined;
   let componentImport = undefined as ts.Identifier | undefined;
   let propertiesAsState: Record<string, string[]> = {};
+  let interfaceDefinition: ts.TypeLiteralNode | undefined;
   let componentLibrary = "";
   let eventHandlers = "";
   let id = "";
@@ -452,6 +486,14 @@ export const convertRuiToJson = (
       eventHandlers = (node.moduleSpecifier as ts.StringLiteral).text;
     }
     if (
+      ts.isTypeAliasDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === "Props" &&
+      ts.isTypeLiteralNode(node.type)
+    ) {
+      interfaceDefinition = node.type;
+    }
+    if (
       ts.isVariableStatement(node) &&
       node.modifiers &&
       node.modifiers[0].kind === ts.SyntaxKind.ExportKeyword
@@ -474,13 +516,11 @@ export const convertRuiToJson = (
       componentLibrary,
       eventHandlers,
       id,
+      interface: {},
       components: [],
       composition: [],
     };
   }
-
-  // const componentsFile = program.getSourceFile(componentsFileResolve);
-  // console.log(componentsFile);
 
   let properties = undefined as ts.ObjectLiteralExpression | undefined;
   let events = undefined as ts.ObjectLiteralExpression | undefined;
@@ -543,11 +583,13 @@ export const convertRuiToJson = (
   }
 
   const composition = extractComposition(component, context);
+  const componentInterface = extractInterface(interfaceDefinition, context);
 
   return {
     componentLibrary,
     eventHandlers,
     id,
+    interface: componentInterface,
     components,
     composition,
   };

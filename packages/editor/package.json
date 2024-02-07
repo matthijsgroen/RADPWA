@@ -22,7 +22,6 @@
     "start": "parcel",
     "build": "parcel build --no-cache --no-content-hash",
     "watch": "parcel watch --no-cache --no-content-hash",
-    "transform": "rui-transform",
     "copy-to-extension": "node scripts/copy-to-extension.js",
     "build-and-copy": "yarn build && yarn copy-to-extension"
   }

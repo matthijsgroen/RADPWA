@@ -7,12 +7,14 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@rui/transform": "workspace:^",
     "@types/react-dom": "^18.2.18",
     "parcel": "^2.11.0"
   },
   "source": "src/index.html",
   "scripts": {
     "start": "parcel",
+    "transform": "rui-transform",
     "build": "parcel build --no-cache --no-content-hash",
     "watch": "parcel watch --no-cache --no-content-hash"
   }

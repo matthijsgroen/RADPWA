@@ -1,7 +1,6 @@
 import prettier from "prettier";
 import ts, {
   ObjectLiteralElementLike,
-  PropertySignature,
   addSyntheticLeadingComment,
   factory as f,
 } from "typescript";
@@ -10,6 +9,7 @@ import {
   ComponentMetaInformation,
   RuiDataComponent,
   RuiJSONFormat,
+  RuiTypeDeclaration,
   RuiVisualComponent,
 } from "../compiler-types";
 import { capitalize } from "../string-utils";
@@ -173,7 +173,7 @@ export const mergeType = (
           const existingNode = intersection[existingLiteral];
           const propSignatures = ts.isTypeLiteralNode(existingNode)
             ? existingNode.members
-            : f.createNodeArray<PropertySignature>([]);
+            : f.createNodeArray<ts.PropertySignature>([]);
 
           intersection[existingLiteral] = f.createTypeLiteralNode(
             propSignatures.concat(item.members),
@@ -236,9 +236,49 @@ const componentAsType = (
   return mergeType(type, propsAsStateType, childComponents);
 };
 
+const createType = (typeString: string): ts.TypeNode => {
+  if (typeString === "string") {
+    return f.createKeywordTypeNode(ts.SyntaxKind.StringKeyword);
+  }
+  if (typeString === "number") {
+    return f.createKeywordTypeNode(ts.SyntaxKind.NumberKeyword);
+  }
+  if (typeString === "boolean") {
+    return f.createKeywordTypeNode(ts.SyntaxKind.BooleanKeyword);
+  }
+
+  if (typeString === "unknown") {
+    return f.createKeywordTypeNode(ts.SyntaxKind.UnknownKeyword);
+  }
+
+  return f.createTypeReferenceNode(f.createIdentifier(typeString), undefined);
+};
+
+const defineInterface = (
+  componentInterface: Record<string, RuiTypeDeclaration>,
+): ts.Statement =>
+  f.createTypeAliasDeclaration(
+    undefined,
+    f.createIdentifier("Props"),
+    undefined,
+    f.createTypeLiteralNode(
+      Object.entries(componentInterface).map(([key, value]) =>
+        f.createPropertySignature(
+          [f.createToken(ts.SyntaxKind.ReadonlyKeyword)],
+          f.createIdentifier(key),
+          value.optional
+            ? f.createToken(ts.SyntaxKind.QuestionToken)
+            : undefined,
+          createType(value.type),
+        ),
+      ),
+    ),
+  );
+
 export const defineScopeType = (
   flatComponentList: (RuiDataComponent | RuiVisualComponent)[],
   vcl: ComponentLibraryMetaInformation,
+  hasProps: boolean,
 ) => {
   const hasPropsAsState = (c: RuiDataComponent | RuiVisualComponent) =>
     "propsAsState" in c && (c.propsAsState?.length ?? 0) > 0;
@@ -246,22 +286,28 @@ export const defineScopeType = (
   const producesResultType = (c: RuiDataComponent | RuiVisualComponent) =>
     c.component && vcl[c.component] && vcl[c.component].produces !== undefined;
 
+  const scopeType = f.createTypeLiteralNode(
+    flatComponentList
+      .filter((c) => hasPropsAsState(c) || producesResultType(c))
+      .map((c) =>
+        f.createPropertySignature(
+          [f.createToken(ts.SyntaxKind.ReadonlyKeyword)],
+          c.id,
+          undefined,
+          componentAsType(c, vcl),
+        ),
+      ),
+  );
   return f.createTypeAliasDeclaration(
     [f.createToken(ts.SyntaxKind.ExportKeyword)],
     "Scope",
     undefined,
-    f.createTypeLiteralNode(
-      flatComponentList
-        .filter((c) => hasPropsAsState(c) || producesResultType(c))
-        .map((c) =>
-          f.createPropertySignature(
-            [f.createToken(ts.SyntaxKind.ReadonlyKeyword)],
-            c.id,
-            undefined,
-            componentAsType(c, vcl),
-          ),
-        ),
-    ),
+    hasProps
+      ? f.createIntersectionTypeNode([
+          scopeType,
+          f.createTypeReferenceNode("Props"),
+        ])
+      : scopeType,
   );
 };
 
@@ -297,7 +343,7 @@ const wireVisualComponentsToReactComponents = (
 const writeConstObject = (
   name: string,
   typeName: string | undefined,
-  members: ts.PropertyAssignment[],
+  members: ts.ObjectLiteralElementLike[],
 ) =>
   f.createVariableStatement(
     undefined,
@@ -427,7 +473,11 @@ const writeComponentEvents = (
       ),
   );
 
-const createComponentFunction = (name: string, statements: ts.Statement[]) =>
+const createComponentFunction = (
+  name: string,
+  hasProps: boolean,
+  statements: ts.Statement[],
+) =>
   f.createVariableStatement(
     [f.createToken(ts.SyntaxKind.ExportKeyword)],
     f.createVariableDeclarationList(
@@ -435,7 +485,20 @@ const createComponentFunction = (name: string, statements: ts.Statement[]) =>
         f.createVariableDeclaration(
           f.createIdentifier(name),
           undefined,
-          undefined,
+          f.createTypeReferenceNode(
+            f.createQualifiedName(
+              f.createIdentifier("React"),
+              f.createIdentifier("FC"),
+            ),
+            hasProps
+              ? [
+                  f.createTypeReferenceNode(
+                    f.createIdentifier("Props"),
+                    undefined,
+                  ),
+                ]
+              : [],
+          ),
           f.createArrowFunction(
             undefined,
             undefined,
@@ -568,13 +631,19 @@ const createDataComponent = (
 const writeScope = (
   flatComponentList: (RuiDataComponent | RuiVisualComponent)[],
   vcl: ComponentLibraryMetaInformation,
+  hasProps: boolean,
 ) =>
   writeConstObject(
     "scope",
     "Scope",
-    flatComponentList
-      .filter((c) => vcl[c.component].produces || hasPropsAsState(c, vcl))
-      .map((c) => createDataComponent(c, vcl)),
+    (hasProps
+      ? [f.createSpreadAssignment(f.createIdentifier("props"))]
+      : ([] as ts.PropertyAssignment[])
+    ).concat(
+      ...flatComponentList
+        .filter((c) => vcl[c.component].produces || hasPropsAsState(c, vcl))
+        .map((c) => createDataComponent(c, vcl)),
+    ),
   );
 
 const createCompositionNode = (
@@ -703,6 +772,7 @@ export const convertJsonToRui = (
       `Defined components are missing from the library: ${missingComponents.join(", ")}`,
     );
   }
+  const hasProps = Object.keys(structure.interface).length > 0;
 
   const sourceFile = f.createSourceFile(
     [
@@ -720,12 +790,13 @@ export const convertJsonToRui = (
       componentsImport(structure.componentLibrary),
       eventHandlersImport(structure.eventHandlers),
       ...defineComponentTypes(),
-      defineScopeType(visualFlatComponentList, vcl),
-      createComponentFunction(structure.id, [
+      defineInterface(structure.interface),
+      defineScopeType(visualFlatComponentList, vcl, hasProps),
+      createComponentFunction(structure.id, hasProps, [
         ...wireVisualComponentsToReactComponents(visualFlatComponentList, vcl),
         writeComponentProperties(fullFlatComponentList),
         writeComponentEvents(fullFlatComponentList, vcl),
-        writeScope(visualFlatComponentList, vcl),
+        writeScope(visualFlatComponentList, vcl, hasProps),
 
         f.createReturnStatement(
           f.createParenthesizedExpression(

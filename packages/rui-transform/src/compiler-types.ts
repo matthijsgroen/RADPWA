@@ -19,10 +19,24 @@ export type RuiVisualComponent = {
   childContainers?: Record<string, RuiVisualComponent[]>;
 };
 
+export type RuiDependency = {
+  module: string;
+  name: string;
+  importName?: string;
+  namedImport: boolean;
+};
+
+export type RuiTypeDeclaration = {
+  type: string;
+  optional: boolean;
+  dependencies: RuiDependency[];
+};
+
 export type RuiJSONFormat = {
   componentLibrary: string;
   eventHandlers: string;
   id: string;
+  interface: Record<string, RuiTypeDeclaration>;
   components: RuiDataComponent[];
   composition: RuiVisualComponent[];
 };
