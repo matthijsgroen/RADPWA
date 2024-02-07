@@ -31,3 +31,5 @@ yarn watch
 cd packages/vscode-rui-editor
 yarn build
 ```
+
+Open the 'extension.ts' in VS-Code, and press `F5` to load an extension host and test the editor.

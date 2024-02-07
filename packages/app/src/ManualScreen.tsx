@@ -210,14 +210,19 @@ const mainScreen = () => {
             <SplitterPanel minSize={10}>
               <Pane>
                 <Panel header={"View"}>
-                  {screenStructure ? (
-                    <ComponentTreeView
-                      ruiComponents={screenStructure}
-                      selectedComponent={setSelectedComponent}
-                    />
-                  ) : (
-                    <ProgressSpinner />
-                  )}
+                  <TabView>
+                    <TabPanel header="Structure">
+                      {screenStructure ? (
+                        <ComponentTreeView
+                          ruiComponents={screenStructure}
+                          selectedComponent={setSelectedComponent}
+                        />
+                      ) : (
+                        <ProgressSpinner />
+                      )}
+                    </TabPanel>
+                    <TabPanel header="Interface"></TabPanel>
+                  </TabView>
                 </Panel>
               </Pane>
             </SplitterPanel>
