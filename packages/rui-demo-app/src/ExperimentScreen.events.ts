@@ -1,4 +1,4 @@
-import type { Scope } from "./ExperimentScreen2.rui";
+import type { Scope } from "./ExperimentScreen.rui";
 
 const wait = (duration: number) =>
   new Promise((resolve) => {

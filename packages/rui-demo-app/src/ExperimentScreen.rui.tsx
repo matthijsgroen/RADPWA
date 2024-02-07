@@ -11,7 +11,7 @@ import {
   composeDataChildren,
 } from "@rui/transform";
 import Components, { TAction } from "../rapid-components";
-import eventHandlers from "./ExperimentScreen2.events";
+import eventHandlers from "./ExperimentScreen.events";
 
 type CL = typeof Components;
 type CProps<TComponentName extends keyof CL> = Partial<

@@ -7,9 +7,7 @@ import { DataTable } from "primereact/datatable";
 import { Column, ColumnEditorOptions, ColumnEvent } from "primereact/column";
 import { InputText } from "primereact/inputtext";
 import { TriStateCheckbox } from "primereact/tristatecheckbox";
-import ComponentTreeView, {
-  ComponentTreeNode,
-} from "./components/ComponentTreeView";
+import ComponentTreeView from "./components/ComponentTreeView";
 import {
   PropertyItem,
   processComponentEvents,
@@ -277,7 +275,7 @@ const mainScreen = () => {
             <Panel header={"Components"}>
               {componentsStructure ? (
                 <ul>
-                  {Object.entries(componentsStructure).map(([k, v]) => (
+                  {Object.entries(componentsStructure).map(([k, _v]) => (
                     <li key={k}>{k}</li>
                   ))}
                 </ul>

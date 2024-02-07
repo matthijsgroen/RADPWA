@@ -1,0 +1,19 @@
+{
+  "name": "@rui/demo-app",
+  "packageManager": "yarn@4.1.0",
+  "version": "1.0.0-alpha",
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react-dom": "^18.2.18",
+    "parcel": "^2.11.0"
+  },
+  "source": "src/index.html",
+  "scripts": {
+    "start": "parcel",
+    "build": "parcel build --no-cache --no-content-hash",
+    "watch": "parcel watch --no-cache --no-content-hash"
+  }
+}

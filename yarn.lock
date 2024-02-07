@@ -1306,6 +1306,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rui/demo-app@workspace:packages/rui-demo-app":
+  version: 0.0.0-use.local
+  resolution: "@rui/demo-app@workspace:packages/rui-demo-app"
+  dependencies:
+    "@types/react-dom": "npm:^18.2.18"
+    parcel: "npm:^2.11.0"
+    react: "npm:^18.2.0"
+    react-dom: "npm:^18.2.0"
+  languageName: unknown
+  linkType: soft
+
 "@rui/prime-react@workspace:^, @rui/prime-react@workspace:packages/rui-prime-react":
   version: 0.0.0-use.local
   resolution: "@rui/prime-react@workspace:packages/rui-prime-react"
