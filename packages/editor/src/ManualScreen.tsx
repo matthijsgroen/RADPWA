@@ -73,6 +73,7 @@ const mainScreen = () => {
   );
 
   const [screenStructure, setScreenStructure] = useState<RuiJSONFormat>();
+  const [scopeType, setScopeType] = useState<string>("");
   const [componentsStructure, setComponentsStructure] =
     useState<ComponentLibraryMetaInformation>();
 
@@ -139,6 +140,9 @@ const mainScreen = () => {
     // Process the JSON data received from the extension
     if (event.data.type === "UPDATE_COMMAND") {
       setScreenStructure(event.data.data);
+    }
+    if (event.data.type === "UPDATE_SCOPE_TYPE") {
+      setScopeType(event.data.data);
     }
     if (event.data.type === "UPDATE_COMPONENTS") {
       setComponentsStructure(event.data.data);
@@ -243,6 +247,7 @@ const mainScreen = () => {
                         <Column field="type" header="Type"></Column>
                         <Column field="optional" header="Optional"></Column>
                       </DataTable>
+                  <CodeHighlighter code={scopeType} />
                     </TabPanel>
                   </TabView>
                 </Panel>
