@@ -22,7 +22,11 @@ export type {
   RuiVisualComponent,
 } from "./compiler-types";
 
-export { convertJsonToRui } from "./jsonToRui/convert";
+export {
+  convertJsonToRui,
+  defineScopeType,
+  getFlatComponentList,
+} from "./jsonToRui/convert";
 export { convertRuiToJson } from "./ruiToJson/convert";
 
 export { run } from "./cli";
