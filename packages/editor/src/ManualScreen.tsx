@@ -206,7 +206,7 @@ const mainScreen = () => {
     <Pane>
       <Splitter>
         <SplitterPanel minSize={20}>
-          <Splitter layout={"vertical"}>
+          <Splitter layout={"horizontal"}>
             <SplitterPanel minSize={10}>
               <Pane>
                 <Panel header={"View"}>
