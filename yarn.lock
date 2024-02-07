@@ -1310,6 +1310,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@rui/demo-app@workspace:packages/rui-demo-app"
   dependencies:
+    "@rui/transform": "workspace:^"
     "@types/react-dom": "npm:^18.2.18"
     parcel: "npm:^2.11.0"
     react: "npm:^18.2.0"

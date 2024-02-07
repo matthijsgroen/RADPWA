@@ -12,12 +12,14 @@ export { composeDataChildren } from "./data/composeDataChildren";
 export { getProjectComponentsFromType } from "./componentLibrary/getProjectComponentsFromType";
 
 export type {
-  RuiJSONFormat,
-  RuiDataComponent,
-  RuiVisualComponent,
+  ComponentDependency,
   ComponentLibraryMetaInformation,
   ComponentMetaInformation,
-  ComponentDependency,
+  RuiDataComponent,
+  RuiDependency,
+  RuiJSONFormat,
+  RuiTypeDeclaration,
+  RuiVisualComponent,
 } from "./compiler-types";
 
 export { convertJsonToRui } from "./jsonToRui/convert";

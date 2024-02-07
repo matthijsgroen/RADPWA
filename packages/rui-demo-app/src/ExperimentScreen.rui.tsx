@@ -21,6 +21,10 @@ type CEvents<TComponentName extends keyof CL> = Partial<
   EventsOf<CL[TComponentName]>
 >;
 
+type Props = {
+  readonly input?: string;
+};
+
 export type Scope = {
   readonly user: {
     value: string;
@@ -36,9 +40,9 @@ export type Scope = {
   readonly button1: {
     disabled?: boolean;
   };
-};
+} & Props;
 
-export const MainScreen = () => {
+export const MainScreen: React.FC<Props> = (props) => {
   const Panel1 = Components.Panel.vc;
   const Text1 = Components.Text.vc;
   const Button1 = Components.Button.vc;
@@ -74,6 +78,7 @@ export const MainScreen = () => {
     } satisfies CEvents<"Action">,
   };
   const scope: Scope = {
+    ...props,
     user: Components.ComponentState.produce({ ...properties.User }),
     text1: exposePropsAsState({}, properties.Text1, "content"),
     button1: exposePropsAsState(
