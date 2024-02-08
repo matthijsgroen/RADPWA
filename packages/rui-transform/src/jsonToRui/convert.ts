@@ -213,22 +213,23 @@ const componentAsType = (
     : undefined;
   const childComponents = c.childContainers
     ? f.createTypeLiteralNode(
-        Object.entries(c.childContainers).map(([k, v]) =>
-          f.createPropertySignature(
-            [f.createToken(ts.SyntaxKind.ReadonlyKeyword)],
-            k,
-            undefined,
-            f.createTypeLiteralNode(
-              v.map((c) =>
-                f.createPropertySignature(
-                  [f.createToken(ts.SyntaxKind.ReadonlyKeyword)],
-                  c.id,
-                  undefined,
-                  componentAsType(c, vcl),
+        Object.entries(c.childContainers).map(
+          ([k, v]: [string, RuiDataComponent[] | RuiVisualComponent[]]) =>
+            f.createPropertySignature(
+              [f.createToken(ts.SyntaxKind.ReadonlyKeyword)],
+              k,
+              undefined,
+              f.createTypeLiteralNode(
+                v.map((c) =>
+                  f.createPropertySignature(
+                    [f.createToken(ts.SyntaxKind.ReadonlyKeyword)],
+                    c.id,
+                    undefined,
+                    componentAsType(c, vcl),
+                  ),
                 ),
               ),
             ),
-          ),
         ),
       )
     : undefined;
@@ -574,13 +575,14 @@ const wrapWithDataChildContainers = (
       [
         contents,
         f.createObjectLiteralExpression(
-          Object.entries(component.childContainers).map(([k, v]) =>
-            f.createPropertyAssignment(
-              k,
-              f.createObjectLiteralExpression(
-                v.map((child) => createDataComponent(child, vcl)),
+          Object.entries(component.childContainers).map(
+            ([k, v]: [string, RuiDataComponent[]]) =>
+              f.createPropertyAssignment(
+                k,
+                f.createObjectLiteralExpression(
+                  v.map((child) => createDataComponent(child, vcl)),
+                ),
               ),
-            ),
           ),
         ),
       ],
