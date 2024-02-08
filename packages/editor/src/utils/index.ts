@@ -3,6 +3,7 @@ import {
   RuiDataComponent,
   RuiVisualComponent,
 } from "@rui/transform";
+import { PrimeIcons } from "primereact/api";
 import { ComponentTreeNode } from "~src/components/ComponentTreeView";
 
 export type PropertyItem<TType = unknown> = {
@@ -79,6 +80,7 @@ export const transformToTreeNode = (
           key: name,
           label: name,
           data: null,
+          icon: PrimeIcons.FOLDER_OPEN,
           children: transformToTreeNode(container),
         };
       });
