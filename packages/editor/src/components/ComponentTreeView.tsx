@@ -4,6 +4,7 @@ import {
   RuiVisualComponent,
 } from "@rui/transform";
 import { PrimeIcons } from "primereact/api";
+import { Button } from "primereact/button";
 import { Tree } from "primereact/tree";
 import { TreeNode } from "primereact/treenode";
 import { IconType } from "primereact/utils";
@@ -14,6 +15,7 @@ export type ComponentTreeNode = {
   key: string;
   label: string;
   icon?: IconType<TreeNode>;
+  canAddEntry?: boolean;
   data: RuiVisualComponent | RuiDataComponent | null;
   children?: ComponentTreeNode[];
 };
@@ -49,6 +51,28 @@ export default function TreeView({
       value={components}
       selectionMode="single"
       onSelect={(e) => selectedComponent(e.node.key ? `${e.node.key}` : null)}
+      nodeTemplate={(node) => {
+        const componentTreeNode = node as ComponentTreeNode;
+
+        return (
+          <div className="flex items-center justify-between w-full">
+            <div>{componentTreeNode.label}</div>
+            {componentTreeNode.children && componentTreeNode.canAddEntry && (
+              <Button
+                icon="pi pi-plus"
+                rounded
+                text
+                aria-label="Add"
+                onClick={(e) => {
+                  e.stopPropagation();
+
+                  console.log("Add entry");
+                }}
+              />
+            )}
+          </div>
+        );
+      }}
     />
   );
 }

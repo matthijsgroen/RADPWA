@@ -80,6 +80,7 @@ export const transformToTreeNode = (
           key: name,
           label: name,
           data: null,
+          canAddEntry: true,
           icon: PrimeIcons.FOLDER_OPEN,
           children: transformToTreeNode(container),
         };
