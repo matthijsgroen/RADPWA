@@ -1,4 +1,5 @@
 import {
+  ComponentLibraryMetaInformation,
   ComponentMetaInformation,
   RuiDataComponent,
   RuiJSONFormat,
@@ -7,6 +8,7 @@ import {
 import { produce } from "immer";
 import { ColumnEvent } from "primereact/column";
 import { traverse, treeSearch } from "./treeSearch";
+import { isRef } from "~src/utils";
 
 const updatePropsAsState = <T extends RuiDataComponent | RuiVisualComponent>(
   component: T,
@@ -55,16 +57,61 @@ export const updateProperty = (
     }
   });
 
-export const renameComponentId = (previousId: string, newId: string) =>
+const updateComponentPropRefs = (
+  previousId: string,
+  newId: string,
+  props: Record<string, any> | undefined,
+  componentType: string,
+  vcl: ComponentLibraryMetaInformation,
+) => {
+  if (props === undefined) return;
+  const componentInfo = vcl[componentType];
+  for (const key in props) {
+    const propInfo = componentInfo.properties[key];
+
+    if (isRef({ ...props[key], type: propInfo.typeAsString })) {
+      const reference: string = props[key].ref;
+
+      const updatedValue = reference
+        .split(".")
+        .map((v, i) => (i % 2 === 0 && v === previousId ? newId : v))
+        .join(".");
+
+      if (reference !== updatedValue) {
+        props[key].ref = updatedValue;
+      }
+    }
+  }
+};
+
+export const renameComponentId = (
+  previousId: string,
+  newId: string,
+  vcl: ComponentLibraryMetaInformation,
+) =>
   produce<RuiJSONFormat>((draft) => {
     traverse(draft.components, (component) => {
       if (component.id === previousId) {
         component.id = newId;
       }
+      updateComponentPropRefs(
+        previousId,
+        newId,
+        component.props,
+        component.component,
+        vcl,
+      );
     });
     traverse(draft.composition, (component) => {
       if (component.id === previousId) {
         component.id = newId;
       }
+      updateComponentPropRefs(
+        previousId,
+        newId,
+        component.props,
+        component.component,
+        vcl,
+      );
     });
   });

@@ -9,6 +9,7 @@ import ComponentTreeView from "./components/ComponentTreeView";
 import { PrimeIcons } from "primereact/api";
 import {
   PropertyItem,
+  isRef,
   processComponentEvents,
   processComponentProps,
 } from "./utils";
@@ -36,10 +37,6 @@ import {
   updateInterface,
 } from "./mutations/updateInterface";
 import { Button } from "primereact/button";
-
-// Keeping this here for reference
-const isRef = (data: PropertyItem): data is PropertyItem<{ ref: string }> =>
-  data.type.startsWith("ComponentProductRef<");
 
 const stringValue = (data: PropertyItem): React.ReactNode => {
   const stateMarker = data.exposedAsState ? "🗒️ " : "";
@@ -139,13 +136,18 @@ const mainScreen = () => {
   );
 
   const onCellEditComplete = (e: ColumnEvent) => {
-    if (selectedComponent === undefined) return;
+    if (selectedComponent === undefined || componentsStructure === undefined)
+      return;
 
     const propName = e.rowData.name;
 
     const mutation =
       propName === "id"
-        ? renameComponentId(e.rowData.value, e.newValue.value)
+        ? renameComponentId(
+            e.rowData.value,
+            e.newValue.value,
+            componentsStructure,
+          )
         : updateProperty(e, selectedComponent.id, selectedComponentInfo);
 
     const updatedRuiJson = mutation(screenStructure);

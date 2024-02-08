@@ -92,3 +92,8 @@ export const transformToTreeNode = (
     return treeNode;
   });
 };
+
+export const isRef = (
+  data: PropertyItem,
+): data is PropertyItem<{ ref: string }> =>
+  data.type.startsWith("ComponentProductRef<");
