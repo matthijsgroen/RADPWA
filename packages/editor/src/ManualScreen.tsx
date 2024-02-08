@@ -78,9 +78,9 @@ const stringValue = (data: PropertyItem): React.ReactNode => {
 
 const mainScreen = () => {
   // Only works when the app is running in VSCode
-  const { postMessage } = useVsCode();
+  const { postMessage, getState, setState } = useVsCode();
 
-  const [selectedComponentId, setSelectedComponent] = useState<string | null>(
+  const [selectedComponentId, setSelectedComponentId] = useState<string | null>(
     null,
   );
 
@@ -88,6 +88,16 @@ const mainScreen = () => {
   const [scopeType, setScopeType] = useState<string>("");
   const [componentsStructure, setComponentsStructure] =
     useState<ComponentLibraryMetaInformation>();
+
+  useEffect(() => {
+    if (componentsStructure === undefined) return;
+    setState({
+      scopeType,
+      componentsStructure,
+      selectedComponentId,
+      screenStructure,
+    });
+  }, [scopeType, componentsStructure, selectedComponentId]);
 
   const selectedComponent: RuiVisualComponent | RuiDataComponent | undefined =
     selectedComponentId
@@ -144,6 +154,21 @@ const mainScreen = () => {
 
   useEffect(() => {
     window.addEventListener("message", receiveMessage);
+
+    const initState = getState();
+    console.log(initState);
+    if (initState && initState.selectedComponentId) {
+      setSelectedComponentId(initState.selectedComponentId);
+    }
+    if (initState && initState.scopeType) {
+      setScopeType(initState.scopeType);
+    }
+    if (initState && initState.componentStructure) {
+      setComponentsStructure(initState.componentStructure);
+    }
+    if (initState && initState.screenStructure) {
+      setScreenStructure(initState.screenStructure);
+    }
 
     return () => {
       window.removeEventListener("message", receiveMessage);
@@ -204,7 +229,7 @@ const mainScreen = () => {
                   {screenStructure ? (
                     <ComponentTreeView
                       ruiComponents={screenStructure}
-                      selectedComponent={setSelectedComponent}
+                      selectedComponent={setSelectedComponentId}
                     />
                   ) : (
                     <ProgressSpinner />
