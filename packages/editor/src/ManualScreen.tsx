@@ -97,7 +97,7 @@ const mainScreen = () => {
       selectedComponentId,
       screenStructure,
     });
-  }, [scopeType, componentsStructure, selectedComponentId]);
+  }, [scopeType, componentsStructure, selectedComponentId, screenStructure]);
 
   const selectedComponent: RuiVisualComponent | RuiDataComponent | undefined =
     selectedComponentId
@@ -121,6 +121,7 @@ const mainScreen = () => {
   const componentEventList = selectedComponent
     ? processComponentEvents(selectedComponent.events, selectedComponentInfo)
     : [];
+
   const componentInterfaceList: {
     name: string;
     type: RuiTypeDeclaration;
@@ -156,15 +157,14 @@ const mainScreen = () => {
     window.addEventListener("message", receiveMessage);
 
     const initState = getState();
-    console.log(initState);
     if (initState && initState.selectedComponentId) {
       setSelectedComponentId(initState.selectedComponentId);
     }
     if (initState && initState.scopeType) {
       setScopeType(initState.scopeType);
     }
-    if (initState && initState.componentStructure) {
-      setComponentsStructure(initState.componentStructure);
+    if (initState && initState.componentsStructure) {
+      setComponentsStructure(initState.componentsStructure);
     }
     if (initState && initState.screenStructure) {
       setScreenStructure(initState.screenStructure);
