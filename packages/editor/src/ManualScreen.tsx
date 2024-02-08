@@ -76,17 +76,14 @@ const stringValue = (data: PropertyItem): React.ReactNode => {
 
 const mainScreen = () => {
   // Only works when the app is running in VSCode
-  const { postMessage, getState, setState } = useVsCode();
+  const { postMessage } = useVsCode();
 
   const {
     selectedComponentId,
     setSelectedComponentId,
     screenStructure,
-    setScreenStructure,
     scopeType,
-    setScopeType,
     componentsStructure,
-    setComponentsStructure,
     viewTreeState,
     setViewTreeState,
     activeObjectTab,
@@ -101,15 +98,22 @@ const mainScreen = () => {
     viewTreeState: Record<string, boolean>;
     activeStructureTab: number;
     activeObjectTab: number;
-  }>(getState, setState, {
-    selectedComponentId: null,
-    screenStructure: undefined,
-    scopeType: "",
-    componentsStructure: undefined,
-    viewTreeState: {},
-    activeObjectTab: 0,
-    activeStructureTab: 0,
-  });
+  }>(
+    {
+      selectedComponentId: null,
+      screenStructure: undefined,
+      scopeType: "",
+      componentsStructure: undefined,
+      viewTreeState: {},
+      activeObjectTab: 0,
+      activeStructureTab: 0,
+    },
+    {
+      UPDATE_COMMAND: "screenStructure",
+      UPDATE_SCOPE_TYPE: "scopeType",
+      UPDATE_COMPONENTS: "componentsStructure",
+    },
+  );
 
   const selectedComponent: RuiVisualComponent | RuiDataComponent | undefined =
     selectedComponentId
@@ -173,28 +177,6 @@ const mainScreen = () => {
       if (propName === "id") {
         setSelectedComponentId(e.newValue.value);
       }
-    }
-  };
-
-  useEffect(() => {
-    window.addEventListener("message", receiveMessage);
-
-    return () => {
-      window.removeEventListener("message", receiveMessage);
-    };
-  }, []);
-
-  const receiveMessage = (event: MessageEvent<any>) => {
-    console.log("** Received message from the extension **", event.data);
-    // Process the JSON data received from the extension
-    if (event.data.type === "UPDATE_COMMAND") {
-      setScreenStructure(event.data.data);
-    }
-    if (event.data.type === "UPDATE_SCOPE_TYPE") {
-      setScopeType(event.data.data);
-    }
-    if (event.data.type === "UPDATE_COMPONENTS") {
-      setComponentsStructure(event.data.data);
     }
   };
 

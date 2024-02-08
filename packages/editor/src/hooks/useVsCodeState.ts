@@ -1,15 +1,24 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useVsCode } from "./useVsCode";
 
 export type VSCodeState<T extends Record<string, unknown>> = T & {
   [Key in keyof T as `set${Capitalize<Key & string>}`]: (value: T[Key]) => void;
 };
 
 export const useVsCodeState = <T extends Record<string, unknown>>(
-  getState: () => any,
-  setState: (state: any) => void,
   initialState: T,
+  dataMapper: Record<string, keyof T>,
 ): VSCodeState<T> => {
   const result: Record<string, unknown> = {};
+  const { setState, getState } = useVsCode();
+
+  useEffect(() => {
+    window.addEventListener("message", receiveMessage);
+
+    return () => {
+      window.removeEventListener("message", receiveMessage);
+    };
+  }, []);
 
   const [_, updateState] = useState(0);
 
@@ -25,6 +34,17 @@ export const useVsCodeState = <T extends Record<string, unknown>>(
       updateState((v) => (v + 1) % 4);
     };
   }
+
+  const receiveMessage = (event: MessageEvent<{ type: string; data: any }>) => {
+    const type = event.data.type;
+    const value = event.data.data;
+    const key = dataMapper[type];
+    if (key) {
+      const state = getState();
+      setState({ ...state, [key]: value });
+      updateState((v) => (v + 1) % 4);
+    }
+  };
 
   return result as VSCodeState<T>;
 };
