@@ -7,10 +7,10 @@ import React from "react";
 // Then register the languages you need
 highlightJS.registerLanguage("typescript", typescript);
 
-const CodeHighlighter = ({ code }) => {
+const CodeHighlighter: React.FC<{ code: string }> = ({ code }) => {
   const highlighted = highlightJS.highlight(code, { language: "typescript" });
   return (
-    <code>
+    <code style={{ display: "block" }}>
       <pre>
         <div
           style={{ background: "#333", color: "#999" }}

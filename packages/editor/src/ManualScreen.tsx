@@ -3,11 +3,10 @@ import { Panel } from "primereact/panel";
 import { Splitter, SplitterPanel } from "primereact/splitter";
 import React, { useEffect, useState } from "react";
 import { TabPanel, TabView } from "primereact/tabview";
-import { DataTable } from "primereact/datatable";
-import { Column, ColumnEditorOptions, ColumnEvent } from "primereact/column";
-import { InputText } from "primereact/inputtext";
-import { TriStateCheckbox } from "primereact/tristatecheckbox";
+import { DataTable, DataTableRowEditCompleteEvent } from "primereact/datatable";
+import { Column, ColumnEvent } from "primereact/column";
 import ComponentTreeView from "./components/ComponentTreeView";
+import { PrimeIcons } from "primereact/api";
 import {
   PropertyItem,
   processComponentEvents,
@@ -18,12 +17,25 @@ import {
   ComponentLibraryMetaInformation,
   RuiDataComponent,
   RuiJSONFormat,
+  RuiTypeDeclaration,
   RuiVisualComponent,
 } from "@rui/transform";
 import { ProgressSpinner } from "primereact/progressspinner";
-import { Checkbox } from "primereact/checkbox";
 import { updateProperty } from "./mutations/updateProperty";
 import { treeSearch } from "./mutations/treeSearch";
+import { CodeHighlighter } from "./components/CodePreview";
+import { propertyEdit } from "./propertyEdit";
+import {
+  cellBooleanEditor,
+  cellIntelliSenseType,
+  cellTextEditor,
+} from "./cellEditors";
+import {
+  addPropertyToInterface,
+  removePropertyFromInterface,
+  updateInterface,
+} from "./mutations/updateInterface";
+import { Button } from "primereact/button";
 
 // Keeping this here for reference
 const isRef = (data: PropertyItem): data is PropertyItem<{ ref: string }> =>
@@ -66,15 +78,26 @@ const stringValue = (data: PropertyItem): React.ReactNode => {
 
 const mainScreen = () => {
   // Only works when the app is running in VSCode
-  const { postMessage } = useVsCode();
+  const { postMessage, getState, setState } = useVsCode();
 
-  const [selectedComponentId, setSelectedComponent] = useState<string | null>(
+  const [selectedComponentId, setSelectedComponentId] = useState<string | null>(
     null,
   );
 
   const [screenStructure, setScreenStructure] = useState<RuiJSONFormat>();
+  const [scopeType, setScopeType] = useState<string>("");
   const [componentsStructure, setComponentsStructure] =
     useState<ComponentLibraryMetaInformation>();
+
+  useEffect(() => {
+    if (componentsStructure === undefined) return;
+    setState({
+      scopeType,
+      componentsStructure,
+      selectedComponentId,
+      screenStructure,
+    });
+  }, [scopeType, componentsStructure, selectedComponentId, screenStructure]);
 
   const selectedComponent: RuiVisualComponent | RuiDataComponent | undefined =
     selectedComponentId
@@ -99,8 +122,23 @@ const mainScreen = () => {
     ? processComponentEvents(selectedComponent.events, selectedComponentInfo)
     : [];
 
+  const componentInterfaceList: {
+    name: string;
+    type: RuiTypeDeclaration;
+    optional: boolean;
+  }[] = Object.entries(screenStructure?.interface ?? {}).map(
+    ([name, value]) => ({
+      name,
+      type: {
+        type: value.type,
+        dependencies: value.dependencies,
+        optional: false,
+      },
+      optional: value.optional,
+    }),
+  );
+
   const onCellEditComplete = (e: ColumnEvent) => {
-    console.log("new value: ", e.newValue);
     if (selectedComponent === undefined) return;
 
     const updatedRuiJson = updateProperty(
@@ -118,6 +156,20 @@ const mainScreen = () => {
   useEffect(() => {
     window.addEventListener("message", receiveMessage);
 
+    const initState = getState();
+    if (initState && initState.selectedComponentId) {
+      setSelectedComponentId(initState.selectedComponentId);
+    }
+    if (initState && initState.scopeType) {
+      setScopeType(initState.scopeType);
+    }
+    if (initState && initState.componentsStructure) {
+      setComponentsStructure(initState.componentsStructure);
+    }
+    if (initState && initState.screenStructure) {
+      setScreenStructure(initState.screenStructure);
+    }
+
     return () => {
       window.removeEventListener("message", receiveMessage);
     };
@@ -129,151 +181,162 @@ const mainScreen = () => {
     if (event.data.type === "UPDATE_COMMAND") {
       setScreenStructure(event.data.data);
     }
+    if (event.data.type === "UPDATE_SCOPE_TYPE") {
+      setScopeType(event.data.data);
+    }
     if (event.data.type === "UPDATE_COMPONENTS") {
       setComponentsStructure(event.data.data);
     }
   };
-  const propertyEdit = (options: ColumnEditorOptions) => {
-    if (options.rowData.type === "string") {
-      const value = {
-        value: options.rowData.value,
-        exposedAsState: options.rowData.exposedAsState,
-        ...options.value,
-      };
-      return (
-        <>
-          <InputText
-            value={value.value}
-            onChange={(e) =>
-              options.editorCallback!({
-                ...value,
-                value: e.target.value,
-              })
-            }
-          />
-          <br />
-          <label>
-            expose as state:
-            <Checkbox
-              checked={value.exposedAsState}
-              onChange={(e) =>
-                options.editorCallback!({
-                  ...value,
-                  exposedAsState: !!e.target.checked,
-                })
-              }
-            />
-          </label>
-        </>
-      );
+
+  const updateInterfaceProperty = (
+    event: DataTableRowEditCompleteEvent,
+  ): void => {
+    const updatedRuiJson = updateInterface(event)(screenStructure);
+
+    if (updatedRuiJson !== screenStructure) {
+      console.log("** Sending updated JSON to the extension **");
+      postMessage({ type: CommandType.EDIT_COMMAND, data: updatedRuiJson });
     }
-    if (options.rowData.type === "boolean") {
-      const value = {
-        value: options.rowData.value,
-        exposedAsState: options.rowData.exposedAsState,
-        ...options.value,
-      };
-      return (
-        <>
-          <TriStateCheckbox
-            value={options.value}
-            onChange={(e) =>
-              options.editorCallback!({
-                ...value,
-                value: e.target.value,
-              })
-            }
-          />
-          <br />
-          <label>
-            expose as state:
-            <Checkbox
-              checked={value.exposedAsState}
-              onChange={(e) =>
-                options.editorCallback!({
-                  ...value,
-                  exposedAsState: !!e.target.checked,
-                })
-              }
-            />
-          </label>
-        </>
-      );
+  };
+
+  const addInterfaceProperty = () => {
+    const updatedRuiJson = addPropertyToInterface()(screenStructure);
+
+    if (updatedRuiJson !== screenStructure) {
+      console.log("** Sending updated JSON to the extension **");
+      postMessage({ type: CommandType.EDIT_COMMAND, data: updatedRuiJson });
+    }
+  };
+
+  const removeInterfaceProperty = (name: string) => {
+    const updatedRuiJson = removePropertyFromInterface(name)(screenStructure);
+
+    if (updatedRuiJson !== screenStructure) {
+      console.log("** Sending updated JSON to the extension **");
+      postMessage({ type: CommandType.EDIT_COMMAND, data: updatedRuiJson });
     }
   };
 
   return (
     <Pane>
-      <Splitter>
-        <SplitterPanel minSize={20}>
-          <Splitter layout={"horizontal"}>
-            <SplitterPanel minSize={10}>
-              <Pane>
-                <Panel header={"View"}>
-                  <TabView>
-                    <TabPanel header="Structure">
-                      {screenStructure ? (
-                        <ComponentTreeView
-                          ruiComponents={screenStructure}
-                          selectedComponent={setSelectedComponent}
+      <Splitter layout={"horizontal"}>
+        <SplitterPanel minSize={10}>
+          <Pane>
+            <Panel header={"View"}>
+              <TabView>
+                <TabPanel header="Structure">
+                  {screenStructure ? (
+                    <ComponentTreeView
+                      ruiComponents={screenStructure}
+                      selectedComponent={setSelectedComponentId}
+                    />
+                  ) : (
+                    <ProgressSpinner />
+                  )}
+                </TabPanel>
+                <TabPanel header="Interface">
+                  <DataTable
+                    value={componentInterfaceList}
+                    size="small"
+                    stripedRows
+                    scrollable
+                    scrollHeight="100%"
+                    editMode="row"
+                    onRowEditComplete={updateInterfaceProperty}
+                  >
+                    <Column
+                      field="name"
+                      header="Name"
+                      editor={(options) => cellTextEditor(options, "alphanum")}
+                    ></Column>
+                    <Column
+                      field="type"
+                      header="Type"
+                      editor={(options) => cellIntelliSenseType(options)}
+                      body={(e) => e.type.type}
+                    ></Column>
+                    <Column
+                      field="optional"
+                      header="Optional"
+                      editor={(options) => cellBooleanEditor(options)}
+                    ></Column>
+                    <Column rowEditor={true}></Column>
+                    <Column
+                      body={(item) => (
+                        <Button
+                          size="small"
+                          icon={PrimeIcons.TRASH}
+                          severity="secondary"
+                          rounded
+                          text
+                          onClick={() => removeInterfaceProperty(item.name)}
                         />
-                      ) : (
-                        <ProgressSpinner />
                       )}
-                    </TabPanel>
-                    <TabPanel header="Interface"></TabPanel>
-                  </TabView>
-                </Panel>
-              </Pane>
-            </SplitterPanel>
-            <SplitterPanel>
-              <Panel header={"Inspector"} className="w-full">
-                <TabView>
-                  <TabPanel header="Properties">
-                    {selectedComponentInfo && (
-                      <DataTable
-                        value={componentPropertyList}
-                        size="small"
-                        stripedRows
-                        scrollable
-                        scrollHeight="100%"
-                        editMode="cell"
-                      >
-                        <Column field="name" header="Name"></Column>
-                        <Column
-                          // field="value"
-                          header="Value"
-                          body={(data) => stringValue(data)}
-                          editor={propertyEdit}
-                          onCellEditComplete={onCellEditComplete}
-                        ></Column>
-                      </DataTable>
-                    )}
-                  </TabPanel>
-                  <TabPanel header="Events">
-                    {selectedComponentInfo && (
-                      <DataTable
-                        value={componentEventList}
-                        size="small"
-                        stripedRows
-                        scrollable
-                        scrollHeight="100%"
-                      >
-                        <Column field="name" header="Name"></Column>
-                        <Column
-                          // field="value"
-                          header="Value"
-                          body={(data) => stringValue(data)}
-                          editor={propertyEdit}
-                          onCellEditComplete={onCellEditComplete}
-                        ></Column>
-                      </DataTable>
-                    )}
-                  </TabPanel>
-                </TabView>
-              </Panel>
-            </SplitterPanel>
-          </Splitter>
+                    ></Column>
+                  </DataTable>
+                  <div className="flex flex-wrap justify-content-center gap-3 my-4">
+                    <Button
+                      rounded
+                      icon={PrimeIcons.PLUS}
+                      aria-label="Add interface property"
+                      onClick={() => {
+                        addInterfaceProperty();
+                      }}
+                    />
+                  </div>
+                  <CodeHighlighter code={scopeType} />
+                </TabPanel>
+              </TabView>
+            </Panel>
+          </Pane>
+        </SplitterPanel>
+        <SplitterPanel>
+          <Panel header={"Inspector"} className="w-full">
+            <TabView>
+              <TabPanel header="Properties">
+                {selectedComponentInfo && (
+                  <DataTable
+                    value={componentPropertyList}
+                    size="small"
+                    stripedRows
+                    scrollable
+                    scrollHeight="100%"
+                    editMode="cell"
+                  >
+                    <Column field="name" header="Name"></Column>
+                    <Column
+                      // field="value"
+                      header="Value"
+                      body={(data) => stringValue(data)}
+                      editor={propertyEdit}
+                      onCellEditComplete={onCellEditComplete}
+                    ></Column>
+                  </DataTable>
+                )}
+              </TabPanel>
+              <TabPanel header="Events">
+                {selectedComponentInfo && (
+                  <DataTable
+                    value={componentEventList}
+                    size="small"
+                    stripedRows
+                    scrollable
+                    scrollHeight="100%"
+                  >
+                    <Column field="name" header="Name"></Column>
+                    <Column
+                      // field="value"
+                      header="Value"
+                      body={(data) => stringValue(data)}
+                      editor={propertyEdit}
+                      onCellEditComplete={onCellEditComplete}
+                    ></Column>
+                  </DataTable>
+                )}
+              </TabPanel>
+            </TabView>
+          </Panel>
         </SplitterPanel>
       </Splitter>
     </Pane>

@@ -7,10 +7,16 @@ import {
   convertRuiToJson,
   getProjectComponentsFromType,
   convertJsonToRui,
+  defineScopeType,
+  getFlatComponentList,
 } from "@rui/transform";
 
 export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
-  constructor(private readonly context: vscode.ExtensionContext) {}
+  private printer: ts.Printer;
+
+  constructor(private readonly context: vscode.ExtensionContext) {
+    this.printer = ts.createPrinter();
+  }
 
   private static readonly viewType = "ruiCustoms.ruiEditor";
 
@@ -99,9 +105,22 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
       type: "UPDATE_COMPONENTS",
       data: safeVcl,
     });
+    const jsonDocument = this.getDocumentAsJson(document, vcl);
     webviewPanel.webview.postMessage({
       type: "UPDATE_COMMAND",
-      data: this.getDocumentAsJson(document, vcl),
+      data: jsonDocument,
+    });
+    const componentList = getFlatComponentList(jsonDocument);
+    const scopeType = defineScopeType(componentList, vcl, false, false);
+    const typeInfo = this.printer.printNode(
+      ts.EmitHint.Unspecified,
+      scopeType,
+      ts.createSourceFile("t.tsx", "", ts.ScriptTarget.Latest),
+    );
+
+    webviewPanel.webview.postMessage({
+      type: "UPDATE_SCOPE_TYPE",
+      data: typeInfo,
     });
   }
 

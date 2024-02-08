@@ -16,7 +16,7 @@ import { capitalize } from "../string-utils";
 import { convertValue } from "../value-utils";
 import { isVisualComponent } from "../type-utils";
 
-const getFlatComponentList = (
+export const getFlatComponentList = (
   structure: RuiJSONFormat,
   flattenDataComponents = false,
 ): (RuiDataComponent | RuiVisualComponent)[] => {
@@ -279,6 +279,7 @@ export const defineScopeType = (
   flatComponentList: (RuiDataComponent | RuiVisualComponent)[],
   vcl: ComponentLibraryMetaInformation,
   hasProps: boolean,
+  exportType = true,
 ) => {
   const hasPropsAsState = (c: RuiDataComponent | RuiVisualComponent) =>
     "propsAsState" in c && (c.propsAsState?.length ?? 0) > 0;
@@ -299,7 +300,7 @@ export const defineScopeType = (
       ),
   );
   return f.createTypeAliasDeclaration(
-    [f.createToken(ts.SyntaxKind.ExportKeyword)],
+    exportType ? [f.createToken(ts.SyntaxKind.ExportKeyword)] : undefined,
     "Scope",
     undefined,
     hasProps
@@ -502,7 +503,18 @@ const createComponentFunction = (
           f.createArrowFunction(
             undefined,
             undefined,
-            [],
+            hasProps
+              ? [
+                  f.createParameterDeclaration(
+                    undefined,
+                    undefined,
+                    f.createIdentifier("props"),
+                    undefined,
+                    undefined,
+                    undefined,
+                  ),
+                ]
+              : [],
             undefined,
             f.createToken(ts.SyntaxKind.EqualsGreaterThanToken),
             f.createBlock(statements),
@@ -790,7 +802,7 @@ export const convertJsonToRui = (
       componentsImport(structure.componentLibrary),
       eventHandlersImport(structure.eventHandlers),
       ...defineComponentTypes(),
-      defineInterface(structure.interface),
+      ...(hasProps ? [defineInterface(structure.interface)] : []),
       defineScopeType(visualFlatComponentList, vcl, hasProps),
       createComponentFunction(structure.id, hasProps, [
         ...wireVisualComponentsToReactComponents(visualFlatComponentList, vcl),

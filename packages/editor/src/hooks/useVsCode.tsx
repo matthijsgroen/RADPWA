@@ -21,5 +21,8 @@ export const useVsCode = () => {
     window.vscode.postMessage(message);
   };
 
-  return { postMessage };
+  const getState = () => window.vscode.getState();
+  const setState = (state: any) => window.vscode.setState(state);
+
+  return { postMessage, getState, setState };
 };
