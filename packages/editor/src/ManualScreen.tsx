@@ -21,7 +21,7 @@ import {
   RuiVisualComponent,
 } from "@rui/transform";
 import { ProgressSpinner } from "primereact/progressspinner";
-import { updateProperty } from "./mutations/updateProperty";
+import { renameComponentId, updateProperty } from "./mutations/updateProperty";
 import { treeSearch } from "./mutations/treeSearch";
 import { CodeHighlighter } from "./components/CodePreview";
 import { propertyEdit } from "./propertyEdit";
@@ -141,15 +141,21 @@ const mainScreen = () => {
   const onCellEditComplete = (e: ColumnEvent) => {
     if (selectedComponent === undefined) return;
 
-    const updatedRuiJson = updateProperty(
-      e,
-      selectedComponent.id,
-      selectedComponentInfo,
-    )(screenStructure);
+    const propName = e.rowData.name;
+
+    const mutation =
+      propName === "id"
+        ? renameComponentId(e.rowData.value, e.newValue.value)
+        : updateProperty(e, selectedComponent.id, selectedComponentInfo);
+
+    const updatedRuiJson = mutation(screenStructure);
 
     if (updatedRuiJson !== screenStructure) {
       console.log("** Sending updated JSON to the extension **");
       postMessage({ type: CommandType.EDIT_COMMAND, data: updatedRuiJson });
+      if (propName === "id") {
+        setSelectedComponentId(e.newValue.value);
+      }
     }
   };
 
@@ -292,7 +298,10 @@ const mainScreen = () => {
           </Pane>
         </SplitterPanel>
         <SplitterPanel>
-          <Panel header={"Inspector"} className="w-full">
+          <Panel
+            header={`Inspector (${selectedComponent ? selectedComponent.id : "none"})`}
+            className="w-full"
+          >
             <TabView>
               <TabPanel header="Properties">
                 {selectedComponentInfo && (

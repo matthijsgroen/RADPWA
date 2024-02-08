@@ -19,3 +19,17 @@ export const treeSearch = <T extends RuiDataComponent | RuiVisualComponent>(
     }
   }
 };
+
+export const traverse = <T extends RuiDataComponent | RuiVisualComponent>(
+  items: T[],
+  updateItem: (item: T) => void,
+): void => {
+  for (const i of items) {
+    updateItem(i);
+    if (i.childContainers) {
+      for (const containerName in i.childContainers) {
+        traverse<T>(i.childContainers[containerName] as T[], updateItem);
+      }
+    }
+  }
+};

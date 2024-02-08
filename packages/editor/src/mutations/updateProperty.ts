@@ -6,7 +6,7 @@ import {
 } from "@rui/transform";
 import { produce } from "immer";
 import { ColumnEvent } from "primereact/column";
-import { treeSearch } from "./treeSearch";
+import { traverse, treeSearch } from "./treeSearch";
 
 const updatePropsAsState = <T extends RuiDataComponent | RuiVisualComponent>(
   component: T,
@@ -53,4 +53,18 @@ export const updateProperty = (
         component.props[propName] = e.newValue.value;
       }
     }
+  });
+
+export const renameComponentId = (previousId: string, newId: string) =>
+  produce<RuiJSONFormat>((draft) => {
+    traverse(draft.components, (component) => {
+      if (component.id === previousId) {
+        component.id = newId;
+      }
+    });
+    traverse(draft.composition, (component) => {
+      if (component.id === previousId) {
+        component.id = newId;
+      }
+    });
   });
