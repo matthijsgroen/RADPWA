@@ -23,12 +23,16 @@ export type ComponentTreeNode = {
 
 type TreeViewProps = {
   ruiComponents: RuiJSONFormat;
+  viewTreeState: Record<string, boolean>;
+  setVewTreeState: (newState: Record<string, boolean>) => void;
   selectedComponent: (e: string | null) => void;
 };
 
 export default function TreeView({
   ruiComponents,
   selectedComponent,
+  viewTreeState,
+  setVewTreeState,
 }: TreeViewProps) {
   const components: ComponentTreeNode[] = [
     {
@@ -56,6 +60,8 @@ export default function TreeView({
       value={components}
       selectionMode="single"
       onSelect={(e) => selectedComponent(e.node.key ? `${e.node.key}` : null)}
+      expandedKeys={viewTreeState}
+      onToggle={(event) => setVewTreeState(event.value)}
       nodeTemplate={(node) => {
         const componentTreeNode = node as ComponentTreeNode;
 

@@ -37,6 +37,7 @@ import {
   updateInterface,
 } from "./mutations/updateInterface";
 import { Button } from "primereact/button";
+import { useVsCodeState } from "./hooks/useVsCodeState";
 
 const stringValue = (data: PropertyItem): React.ReactNode => {
   const stateMarker = data.exposedAsState ? "🗒️ " : "";
@@ -77,24 +78,30 @@ const mainScreen = () => {
   // Only works when the app is running in VSCode
   const { postMessage, getState, setState } = useVsCode();
 
-  const [selectedComponentId, setSelectedComponentId] = useState<string | null>(
-    null,
-  );
-
-  const [screenStructure, setScreenStructure] = useState<RuiJSONFormat>();
-  const [scopeType, setScopeType] = useState<string>("");
-  const [componentsStructure, setComponentsStructure] =
-    useState<ComponentLibraryMetaInformation>();
-
-  useEffect(() => {
-    if (componentsStructure === undefined) return;
-    setState({
-      scopeType,
-      componentsStructure,
-      selectedComponentId,
-      screenStructure,
-    });
-  }, [scopeType, componentsStructure, selectedComponentId, screenStructure]);
+  const {
+    selectedComponentId,
+    setSelectedComponentId,
+    screenStructure,
+    setScreenStructure,
+    scopeType,
+    setScopeType,
+    componentsStructure,
+    setComponentsStructure,
+    viewTreeState,
+    setViewTreeState,
+  } = useVsCodeState<{
+    selectedComponentId: string | null;
+    screenStructure: RuiJSONFormat | undefined;
+    scopeType: string;
+    componentsStructure: ComponentLibraryMetaInformation | undefined;
+    viewTreeState: Record<string, boolean>;
+  }>(getState, setState, {
+    selectedComponentId: null,
+    screenStructure: undefined,
+    scopeType: "",
+    componentsStructure: undefined,
+    viewTreeState: {},
+  });
 
   const selectedComponent: RuiVisualComponent | RuiDataComponent | undefined =
     selectedComponentId
@@ -164,20 +171,6 @@ const mainScreen = () => {
   useEffect(() => {
     window.addEventListener("message", receiveMessage);
 
-    const initState = getState();
-    if (initState && initState.selectedComponentId) {
-      setSelectedComponentId(initState.selectedComponentId);
-    }
-    if (initState && initState.scopeType) {
-      setScopeType(initState.scopeType);
-    }
-    if (initState && initState.componentsStructure) {
-      setComponentsStructure(initState.componentsStructure);
-    }
-    if (initState && initState.screenStructure) {
-      setScreenStructure(initState.screenStructure);
-    }
-
     return () => {
       window.removeEventListener("message", receiveMessage);
     };
@@ -237,6 +230,8 @@ const mainScreen = () => {
                   {screenStructure ? (
                     <ComponentTreeView
                       ruiComponents={screenStructure}
+                      viewTreeState={viewTreeState}
+                      setVewTreeState={setViewTreeState}
                       selectedComponent={setSelectedComponentId}
                     />
                   ) : (
