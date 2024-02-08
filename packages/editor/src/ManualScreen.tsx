@@ -89,18 +89,26 @@ const mainScreen = () => {
     setComponentsStructure,
     viewTreeState,
     setViewTreeState,
+    activeObjectTab,
+    setActiveObjectTab,
+    activeStructureTab,
+    setActiveStructureTab,
   } = useVsCodeState<{
     selectedComponentId: string | null;
     screenStructure: RuiJSONFormat | undefined;
     scopeType: string;
     componentsStructure: ComponentLibraryMetaInformation | undefined;
     viewTreeState: Record<string, boolean>;
+    activeStructureTab: number;
+    activeObjectTab: number;
   }>(getState, setState, {
     selectedComponentId: null,
     screenStructure: undefined,
     scopeType: "",
     componentsStructure: undefined,
     viewTreeState: {},
+    activeObjectTab: 0,
+    activeStructureTab: 0,
   });
 
   const selectedComponent: RuiVisualComponent | RuiDataComponent | undefined =
@@ -225,7 +233,10 @@ const mainScreen = () => {
         <SplitterPanel minSize={10}>
           <Pane>
             <Panel header={"View"}>
-              <TabView>
+              <TabView
+                activeIndex={activeStructureTab}
+                onTabChange={(e) => setActiveStructureTab(e.index)}
+              >
                 <TabPanel header="Structure">
                   {screenStructure ? (
                     <ComponentTreeView
@@ -299,7 +310,10 @@ const mainScreen = () => {
             header={`Inspector (${selectedComponent ? selectedComponent.id : "none"})`}
             className="w-full"
           >
-            <TabView>
+            <TabView
+              activeIndex={activeObjectTab}
+              onTabChange={(e) => setActiveObjectTab(e.index)}
+            >
               <TabPanel header="Properties">
                 {selectedComponentInfo && (
                   <DataTable
