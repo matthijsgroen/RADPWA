@@ -284,45 +284,41 @@ const mainScreen = () => {
               onTabChange={(e) => setActiveObjectTab(e.index)}
             >
               <TabPanel header="Properties">
-                {selectedComponentInfo && (
-                  <DataTable
-                    value={componentPropertyList}
-                    size="small"
-                    stripedRows
-                    scrollable
-                    scrollHeight="100%"
-                    editMode="cell"
-                  >
-                    <Column field="name" header="Name"></Column>
-                    <Column
-                      // field="value"
-                      header="Value"
-                      body={(data) => stringValue(data)}
-                      editor={propertyEdit}
-                      onCellEditComplete={onCellEditComplete}
-                    ></Column>
-                  </DataTable>
-                )}
+                <DataTable
+                  value={componentPropertyList}
+                  size="small"
+                  stripedRows
+                  scrollable
+                  scrollHeight="100%"
+                  editMode="cell"
+                >
+                  <Column field="name" header="Name"></Column>
+                  <Column
+                    // field="value"
+                    header="Value"
+                    body={(data) => stringValue(data)}
+                    editor={propertyEdit}
+                    onCellEditComplete={onCellEditComplete}
+                  ></Column>
+                </DataTable>
               </TabPanel>
               <TabPanel header="Events">
-                {selectedComponentInfo && (
-                  <DataTable
-                    value={componentEventList}
-                    size="small"
-                    stripedRows
-                    scrollable
-                    scrollHeight="100%"
-                  >
-                    <Column field="name" header="Name"></Column>
-                    <Column
-                      // field="value"
-                      header="Value"
-                      body={(data) => stringValue(data)}
-                      editor={propertyEdit}
-                      onCellEditComplete={onCellEditComplete}
-                    ></Column>
-                  </DataTable>
-                )}
+                <DataTable
+                  value={componentEventList}
+                  size="small"
+                  stripedRows
+                  scrollable
+                  scrollHeight="100%"
+                >
+                  <Column field="name" header="Name"></Column>
+                  <Column
+                    // field="value"
+                    header="Value"
+                    body={(data) => stringValue(data)}
+                    editor={propertyEdit}
+                    onCellEditComplete={onCellEditComplete}
+                  ></Column>
+                </DataTable>
               </TabPanel>
             </TabView>
           </Panel>
