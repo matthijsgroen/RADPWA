@@ -802,7 +802,7 @@ export const convertJsonToRui = (
       componentsImport(structure.componentLibrary),
       eventHandlersImport(structure.eventHandlers),
       ...defineComponentTypes(),
-      defineInterface(structure.interface),
+      ...(hasProps ? [defineInterface(structure.interface)] : []),
       defineScopeType(visualFlatComponentList, vcl, hasProps),
       createComponentFunction(structure.id, hasProps, [
         ...wireVisualComponentsToReactComponents(visualFlatComponentList, vcl),

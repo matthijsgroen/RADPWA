@@ -16,8 +16,8 @@ import { CommandType, useVsCode } from "./hooks/useVsCode";
 import {
   ComponentLibraryMetaInformation,
   RuiDataComponent,
-  RuiDependency,
   RuiJSONFormat,
+  RuiTypeDeclaration,
   RuiVisualComponent,
 } from "@rui/transform";
 import { ProgressSpinner } from "primereact/progressspinner";
@@ -25,8 +25,16 @@ import { updateProperty } from "./mutations/updateProperty";
 import { treeSearch } from "./mutations/treeSearch";
 import { CodeHighlighter } from "./components/CodePreview";
 import { propertyEdit } from "./propertyEdit";
-import { cellBooleanEditor, cellTextEditor } from "./cellEditors";
-import { updateInterface } from "./mutations/updateInterface";
+import {
+  cellBooleanEditor,
+  cellIntelliSenseType,
+  cellTextEditor,
+} from "./cellEditors";
+import {
+  addPropertyToInterface,
+  removePropertyFromInterface,
+  updateInterface,
+} from "./mutations/updateInterface";
 import { Button } from "primereact/button";
 
 // Keeping this here for reference
@@ -105,15 +113,16 @@ const mainScreen = () => {
     : [];
   const componentInterfaceList: {
     name: string;
-    type: {
-      name: string;
-      dependencies: RuiDependency[];
-    };
+    type: RuiTypeDeclaration;
     optional: boolean;
   }[] = Object.entries(screenStructure?.interface ?? {}).map(
     ([name, value]) => ({
       name,
-      type: { name: value.type, dependencies: value.dependencies },
+      type: {
+        type: value.type,
+        dependencies: value.dependencies,
+        optional: false,
+      },
       optional: value.optional,
     }),
   );
@@ -166,6 +175,24 @@ const mainScreen = () => {
     }
   };
 
+  const addInterfaceProperty = () => {
+    const updatedRuiJson = addPropertyToInterface()(screenStructure);
+
+    if (updatedRuiJson !== screenStructure) {
+      console.log("** Sending updated JSON to the extension **");
+      postMessage({ type: CommandType.EDIT_COMMAND, data: updatedRuiJson });
+    }
+  };
+
+  const removeInterfaceProperty = (name: string) => {
+    const updatedRuiJson = removePropertyFromInterface(name)(screenStructure);
+
+    if (updatedRuiJson !== screenStructure) {
+      console.log("** Sending updated JSON to the extension **");
+      postMessage({ type: CommandType.EDIT_COMMAND, data: updatedRuiJson });
+    }
+  };
+
   return (
     <Pane>
       <Splitter layout={"horizontal"}>
@@ -196,12 +223,13 @@ const mainScreen = () => {
                     <Column
                       field="name"
                       header="Name"
-                      editor={(options) => cellTextEditor(options)}
+                      editor={(options) => cellTextEditor(options, "alphanum")}
                     ></Column>
                     <Column
                       field="type"
                       header="Type"
-                      body={(e) => e.type.name}
+                      editor={(options) => cellIntelliSenseType(options)}
+                      body={(e) => e.type.type}
                     ></Column>
                     <Column
                       field="optional"
@@ -209,12 +237,27 @@ const mainScreen = () => {
                       editor={(options) => cellBooleanEditor(options)}
                     ></Column>
                     <Column rowEditor={true}></Column>
+                    <Column
+                      body={(item) => (
+                        <Button
+                          size="small"
+                          icon={PrimeIcons.TRASH}
+                          severity="secondary"
+                          rounded
+                          text
+                          onClick={() => removeInterfaceProperty(item.name)}
+                        />
+                      )}
+                    ></Column>
                   </DataTable>
                   <div className="flex flex-wrap justify-content-center gap-3 my-4">
                     <Button
                       rounded
                       icon={PrimeIcons.PLUS}
                       aria-label="Add interface property"
+                      onClick={() => {
+                        addInterfaceProperty();
+                      }}
                     />
                   </div>
                   <CodeHighlighter code={scopeType} />
