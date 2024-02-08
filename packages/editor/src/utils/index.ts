@@ -68,6 +68,7 @@ export const transformToTreeNode = (
   return components.map((component) => {
     let treeNode: ComponentTreeNode = {
       key: component.id,
+      type: component.type,
       label: `${component.id} (${component.component})`,
       data: component,
     };
@@ -78,6 +79,7 @@ export const transformToTreeNode = (
       ).map<ComponentTreeNode>(([name, container]) => {
         return {
           key: name,
+          type: component.type,
           label: name,
           data: null,
           canAddEntry: true,

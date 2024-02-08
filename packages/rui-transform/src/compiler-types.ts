@@ -2,6 +2,7 @@ import ts from "typescript";
 
 export type RuiDataComponent = {
   id: string;
+  type: string;
   component: string;
   propsAsState?: string[];
   props?: Record<string, any>;
@@ -11,8 +12,8 @@ export type RuiDataComponent = {
 
 export type RuiVisualComponent = {
   id: string;
+  type: string;
   component: string;
-
   props?: Record<string, any>;
   events?: Record<string, any>;
   propsAsState?: string[];

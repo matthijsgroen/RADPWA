@@ -13,6 +13,7 @@ import { transformToTreeNode } from "~src/utils";
 
 export type ComponentTreeNode = {
   key: string;
+  type?: string;
   label: string;
   icon?: IconType<TreeNode>;
   canAddEntry?: boolean;
@@ -66,7 +67,7 @@ export default function TreeView({
                 onClick={(e) => {
                   e.stopPropagation();
 
-                  console.log("Add entry");
+                  console.log(componentTreeNode.type);
                 }}
               />
             )}

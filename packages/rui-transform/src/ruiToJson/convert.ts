@@ -217,6 +217,7 @@ const convertJSXtoComponent = (
     return [
       {
         id,
+        type: "visual",
         component: componentType,
         propsAsState,
         props: props ? props : references ? references : undefined,
@@ -240,6 +241,7 @@ const convertJSXtoComponent = (
     return [
       {
         id: uncapitalize(id),
+        type: "visual",
         component: componentType,
         props,
         events: eventHandlers,
@@ -352,6 +354,7 @@ const extractDataComponent = (
 
       return {
         id,
+        type: "data",
         component: componentName,
         props,
         events: eventHandlers,
