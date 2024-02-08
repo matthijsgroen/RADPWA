@@ -154,6 +154,17 @@ const mainScreen = () => {
     }),
   );
 
+  const mutateScreenStructure = (
+    mutation: (input: RuiJSONFormat) => RuiJSONFormat,
+  ) => {
+    if (screenStructure === undefined) return;
+    const updatedRuiJson = mutation(screenStructure);
+
+    if (updatedRuiJson !== screenStructure) {
+      postMessage({ type: CommandType.EDIT_COMMAND, data: updatedRuiJson });
+    }
+  };
+
   const onCellEditComplete = (e: ColumnEvent) => {
     if (selectedComponent === undefined || componentsStructure === undefined)
       return;
@@ -168,45 +179,24 @@ const mainScreen = () => {
             componentsStructure,
           )
         : updateProperty(e, selectedComponent.id, selectedComponentInfo);
-
-    const updatedRuiJson = mutation(screenStructure);
-
-    if (updatedRuiJson !== screenStructure) {
-      console.log("** Sending updated JSON to the extension **");
-      postMessage({ type: CommandType.EDIT_COMMAND, data: updatedRuiJson });
-      if (propName === "id") {
-        setSelectedComponentId(e.newValue.value);
-      }
+    mutateScreenStructure(mutation);
+    if (propName === "id") {
+      setSelectedComponentId(e.newValue.value);
     }
   };
 
   const updateInterfaceProperty = (
     event: DataTableRowEditCompleteEvent,
   ): void => {
-    const updatedRuiJson = updateInterface(event)(screenStructure);
-
-    if (updatedRuiJson !== screenStructure) {
-      console.log("** Sending updated JSON to the extension **");
-      postMessage({ type: CommandType.EDIT_COMMAND, data: updatedRuiJson });
-    }
+    mutateScreenStructure(updateInterface(event));
   };
 
   const addInterfaceProperty = () => {
-    const updatedRuiJson = addPropertyToInterface()(screenStructure);
-
-    if (updatedRuiJson !== screenStructure) {
-      console.log("** Sending updated JSON to the extension **");
-      postMessage({ type: CommandType.EDIT_COMMAND, data: updatedRuiJson });
-    }
+    mutateScreenStructure(addPropertyToInterface());
   };
 
   const removeInterfaceProperty = (name: string) => {
-    const updatedRuiJson = removePropertyFromInterface(name)(screenStructure);
-
-    if (updatedRuiJson !== screenStructure) {
-      console.log("** Sending updated JSON to the extension **");
-      postMessage({ type: CommandType.EDIT_COMMAND, data: updatedRuiJson });
-    }
+    mutateScreenStructure(removePropertyFromInterface(name));
   };
 
   return (
