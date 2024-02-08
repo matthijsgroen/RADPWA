@@ -169,19 +169,16 @@ const mainScreen = () => {
     if (selectedComponent === undefined || componentsStructure === undefined)
       return;
 
-    const propName = e.rowData.name;
-
-    const mutation =
-      propName === "id"
-        ? renameComponentId(
-            e.rowData.value,
-            e.newValue.value,
-            componentsStructure,
-          )
-        : updateProperty(e, selectedComponent.id, selectedComponentInfo);
-    mutateScreenStructure(mutation);
-    if (propName === "id") {
-      setSelectedComponentId(e.newValue.value);
+    if (e.rowData.name === "id") {
+      const newId = e.newValue.value;
+      mutateScreenStructure(
+        renameComponentId(e.rowData.value, newId, componentsStructure),
+      );
+      setSelectedComponentId(newId);
+    } else {
+      mutateScreenStructure(
+        updateProperty(e, selectedComponent.id, selectedComponentInfo),
+      );
     }
   };
 
