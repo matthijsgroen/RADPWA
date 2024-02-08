@@ -29,6 +29,25 @@ const EditorWithState: React.FC<
 );
 
 export const propertyEdit = (options: ColumnEditorOptions) => {
+  if (options.rowData.name === "id") {
+    const value = {
+      value: options.rowData.value,
+      exposedAsState: false,
+      ...options.value,
+    };
+    return (
+      <InputText
+        value={value.value}
+        size={"small"}
+        onChange={(e) =>
+          options.editorCallback!({
+            ...value,
+            value: e.target.value,
+          })
+        }
+      />
+    );
+  }
   if (options.rowData.type === "string") {
     const value = {
       value: options.rowData.value,
@@ -39,6 +58,7 @@ export const propertyEdit = (options: ColumnEditorOptions) => {
       <EditorWithState value={value} options={options}>
         <InputText
           value={value.value}
+          size={"small"}
           onChange={(e) =>
             options.editorCallback!({
               ...value,
