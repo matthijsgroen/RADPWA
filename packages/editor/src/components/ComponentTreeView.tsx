@@ -36,6 +36,8 @@ export default function TreeView({
       label: "Data",
       icon: PrimeIcons.DATABASE,
       data: null,
+      type: "data",
+      canAddEntry: true,
       children: transformToTreeNode(ruiComponents.components),
     },
     {
@@ -43,6 +45,8 @@ export default function TreeView({
       label: "View",
       icon: PrimeIcons.PALETTE,
       data: null,
+      type: "visual",
+      canAddEntry: true,
       children: transformToTreeNode(ruiComponents.composition),
     },
   ];
