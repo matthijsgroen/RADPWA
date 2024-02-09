@@ -1,6 +1,6 @@
 {
   "name": "RADPWA",
-  "packageManager": "yarn@4.0.2",
+  "packageManager": "yarn@4.1.0",
   "workspaces": [
     "packages/*"
   ],
@@ -12,7 +12,7 @@
     "typescript": "^5.3.3"
   },
   "scripts": {
-    "start": "nx run studio:start",
+    "start": "nx run @rui/editor:start",
     "build": "nx run-many -t build"
   }
 }

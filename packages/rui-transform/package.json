@@ -11,7 +11,7 @@
     "node": ">= 20"
   },
   "scripts": {
-    "build": "parcel build",
+    "build": "parcel build --no-cache",
     "watch": "parcel watch"
   },
   "dependencies": {

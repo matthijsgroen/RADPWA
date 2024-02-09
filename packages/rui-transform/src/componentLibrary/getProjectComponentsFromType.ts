@@ -7,10 +7,10 @@ import {
   getPropertyTypes,
 } from "./helpers";
 
-export const getProjectComponentsFromType = async (
+export const getProjectComponentsFromType = (
   program: ts.Program,
   filePath: string,
-): Promise<ComponentLibraryMetaInformation> => {
+): ComponentLibraryMetaInformation => {
   const typeChecker = program.getTypeChecker();
   const printer = ts.createPrinter();
 

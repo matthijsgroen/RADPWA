@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "parcel build"
+    "build": "parcel build --no-cache"
   },
   "devDependencies": {
     "@rui/transform": "workspace:^",

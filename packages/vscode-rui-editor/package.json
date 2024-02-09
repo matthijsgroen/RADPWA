@@ -1,0 +1,71 @@
+{
+  "name": "vscode-rui-editor",
+  "displayName": "RUI Editor",
+  "description": "",
+  "publisher": "kabisa",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "rad-generator.radEditor",
+        "title": "Rapid Application Development (RAD) Editor"
+      },
+      {
+        "command": "rui.showSource",
+        "title": "Show TSX Source",
+        "icon": "$(file-code)"
+      }
+    ],
+    "customEditors": [
+      {
+        "viewType": "ruiCustoms.ruiEditor",
+        "displayName": "RUI Editor",
+        "selector": [
+          {
+            "filenamePattern": "*.rui.tsx"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "when": "resourcePath =~ /\\.rui\\.tsx$/ && editorLangId != typescriptreact",
+          "command": "rui.showSource",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "yarn run compile",
+    "build": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "yarn run compile && yarn run lint",
+    "lint": "eslint src --ext ts",
+    "test": "vscode-test"
+  },
+  "dependencies": {
+    "@rui/transform": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.6",
+    "@types/node": "18.x",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "@vscode/test-cli": "^0.0.4",
+    "@vscode/test-electron": "^2.3.8",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3"
+  }
+}

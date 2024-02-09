@@ -27,16 +27,14 @@ export const run = (args: string[]) => {
         options: { rootDir: "." },
         host,
       });
+      const contents = await readFile(filePath, "utf-8");
 
       const vcl = await getProjectComponentsFromType(
         program,
         "./rapid-components.tsx",
       );
-      const jsonResult = await convertRuiToJson(program, filePath, vcl);
+      const jsonResult = await convertRuiToJson(filePath, contents, vcl);
       console.log(JSON.stringify(jsonResult, undefined, 2));
-
-      const tsxResult = await convertJsonToRui(jsonResult, vcl);
-      console.log(tsxResult);
     });
 
   program
