@@ -9,6 +9,7 @@ import ComponentTreeView from "./components/ComponentTreeView";
 import { PrimeIcons } from "primereact/api";
 import {
   PropertyItem,
+  isFunction,
   isRef,
   processComponentEvents,
   processComponentProps,
@@ -39,19 +40,20 @@ import {
 import { Button } from "primereact/button";
 import { useVsCodeState } from "./hooks/useVsCodeState";
 
-const stringValue = (data: PropertyItem): React.ReactNode => {
+const stringValue = (
+  data: PropertyItem,
+  component: RuiDataComponent | RuiVisualComponent | undefined,
+  onOpenExternal?: (type: "function", name: string) => void,
+): React.ReactNode => {
   const stateMarker = data.exposedAsState ? "🗒️ " : "";
   if (data.name === "id") {
     return `${data.value}`;
-  }
-  if (data.value === undefined) {
-    return `${stateMarker}`;
   }
   if (data.type === "string") {
     return (
       <strong>
         {stateMarker}
-        {`${data.value}`}
+        {`${data.value ?? ""}`}
       </strong>
     );
   }
@@ -59,16 +61,36 @@ const stringValue = (data: PropertyItem): React.ReactNode => {
     return (
       <strong>
         {stateMarker}
-        {`${data.value}`}
+        {`${data.value ?? ""}`}
       </strong>
     );
   }
 
   if (isRef(data)) {
-    return `${stateMarker}${data.value.ref}`;
+    return `${stateMarker}${data.value ? data.value.ref : ""}`;
   }
-  if (data.type === "function") {
-    return `${stateMarker}${data.value}`;
+  if (isFunction(data) && component !== undefined) {
+    return (
+      <div className="flex flex-row place-items-center">
+        <div className="flex-1">
+          {stateMarker}
+          {`${data.value ?? ""}`}{" "}
+        </div>
+        {onOpenExternal && data.value && (
+          <Button
+            icon={PrimeIcons.ARROW_RIGHT}
+            severity="secondary"
+            rounded
+            link
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onOpenExternal("function", data.value);
+            }}
+          />
+        )}
+      </div>
+    );
   }
 
   return `${stateMarker}${data.value} - ${data.type}`;
@@ -195,6 +217,9 @@ const mainScreen = () => {
   const removeInterfaceProperty = (name: string) => {
     mutateScreenStructure(removePropertyFromInterface(name));
   };
+  const openExternal = (type: "function", name: string) => {
+    console.log("opening!");
+  };
 
   return (
     <Pane>
@@ -248,11 +273,10 @@ const mainScreen = () => {
                     <Column
                       body={(item) => (
                         <Button
-                          size="small"
                           icon={PrimeIcons.TRASH}
                           severity="secondary"
                           rounded
-                          text
+                          link
                           onClick={() => removeInterfaceProperty(item.name)}
                         />
                       )}
@@ -296,7 +320,7 @@ const mainScreen = () => {
                   <Column
                     // field="value"
                     header="Value"
-                    body={(data) => stringValue(data)}
+                    body={(data) => stringValue(data, selectedComponent)}
                     editor={propertyEdit}
                     onCellEditComplete={onCellEditComplete}
                   ></Column>
@@ -314,7 +338,9 @@ const mainScreen = () => {
                   <Column
                     // field="value"
                     header="Value"
-                    body={(data) => stringValue(data)}
+                    body={(data) =>
+                      stringValue(data, selectedComponent, openExternal)
+                    }
                     editor={propertyEdit}
                     onCellEditComplete={onCellEditComplete}
                   ></Column>

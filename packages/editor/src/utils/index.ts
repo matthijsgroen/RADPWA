@@ -97,3 +97,6 @@ export const isRef = (
   data: PropertyItem,
 ): data is PropertyItem<{ ref: string }> =>
   data.type.startsWith("ComponentProductRef<");
+
+export const isFunction = (data: PropertyItem): data is PropertyItem<string> =>
+  data.type === "function";

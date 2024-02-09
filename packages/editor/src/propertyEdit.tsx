@@ -39,6 +39,7 @@ export const propertyEdit = (options: ColumnEditorOptions) => {
       <InputText
         value={value.value}
         size={"small"}
+        keyfilter={"alphanum"}
         onChange={(e) =>
           options.editorCallback!({
             ...value,
@@ -71,22 +72,37 @@ export const propertyEdit = (options: ColumnEditorOptions) => {
   }
   if (options.rowData.type === "boolean") {
     const value = {
-      value: options.rowData.value,
+      value:
+        options.value === undefined
+          ? options.rowData.value
+          : options.value.value,
       exposedAsState: options.rowData.exposedAsState,
-      ...options.value,
     };
     return (
       <EditorWithState value={value} options={options}>
         <TriStateCheckbox
-          value={options.value}
-          onChange={(e) =>
+          value={value.value}
+          onChange={(e) => {
             options.editorCallback!({
               ...value,
-              value: e.target.value,
-            })
-          }
+              value: e.value,
+            });
+          }}
         />
       </EditorWithState>
     );
   }
+  if (options.rowData.type === "function") {
+    const value = options.value ?? options.rowData.value;
+    return (
+      <InputText
+        size={"small"}
+        keyfilter={"alphanum"}
+        value={value}
+        onChange={(e) => options.editorCallback!(e.target.value)}
+      />
+    );
+  }
+
+  return options.rowData.type;
 };
