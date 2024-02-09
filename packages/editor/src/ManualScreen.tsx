@@ -218,7 +218,7 @@ const mainScreen = () => {
     mutateScreenStructure(removePropertyFromInterface(name));
   };
   const openExternal = (type: "function", name: string) => {
-    console.log("opening!");
+    postMessage({ type: CommandType.OPEN_FUNCTION, data: name });
   };
 
   return (

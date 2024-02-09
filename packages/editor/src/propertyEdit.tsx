@@ -3,6 +3,7 @@ import { ColumnEditorOptions } from "primereact/column";
 import { InputText } from "primereact/inputtext";
 import { TriStateCheckbox } from "primereact/tristatecheckbox";
 import React, { PropsWithChildren } from "react";
+import { isFunction } from "./utils";
 
 const EditorWithState: React.FC<
   PropsWithChildren<{
@@ -92,7 +93,7 @@ export const propertyEdit = (options: ColumnEditorOptions) => {
       </EditorWithState>
     );
   }
-  if (options.rowData.type === "function") {
+  if (isFunction(options.rowData)) {
     const value = options.value ?? options.rowData.value;
     return (
       <InputText

@@ -11,6 +11,22 @@ import {
   getFlatComponentList,
 } from "@rui/transform";
 
+const getEventHandlerFileUri = (
+  document: vscode.TextDocument,
+  handlerFileDefinition: string,
+): vscode.Uri => {
+  // TODO: Requires some major refactor and robustness..
+  // This is just a quick hacky solution to get the proper file open for now
+
+  const pathElements = handlerFileDefinition.split("/");
+  const fileName = pathElements.at(-1);
+  const path = document.uri.path.split("/");
+  path.pop();
+  path.push(`${fileName}.ts`);
+
+  return vscode.Uri.file(path.join("/"));
+};
+
 export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
   private printer: ts.Printer;
 
@@ -73,6 +89,22 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
               console.log("** Received updated JSON from the webview **");
               const Rui = await convertJsonToRui(receivedData, vcl);
               this.editDocument(webviewPanel, document, Rui, vcl);
+              return;
+            case "OPEN_FUNCTION":
+              const functionName = message.data;
+              console.log(
+                "** Received request to open function **",
+                functionName,
+              );
+
+              const jsonDocument = this.getDocumentAsJson(document, vcl);
+              const uri = getEventHandlerFileUri(
+                document,
+                jsonDocument.eventHandlers,
+              );
+              let doc = await vscode.workspace.openTextDocument(uri);
+              vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
+
               return;
           }
         });

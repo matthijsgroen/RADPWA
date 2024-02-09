@@ -2,6 +2,7 @@ import { RuiJSONFormat } from "@rui/transform";
 
 export enum CommandType {
   EDIT_COMMAND = "EDIT_COMMAND",
+  OPEN_FUNCTION = "OPEN_FUNCTION",
 }
 
 type EditCommand = {
@@ -9,8 +10,13 @@ type EditCommand = {
   data: RuiJSONFormat;
 };
 
+type OpenFunctionCommand = {
+  type: CommandType.OPEN_FUNCTION;
+  data: string;
+};
+
 // Only have one command type for now
-type Command = EditCommand;
+type Command = EditCommand | OpenFunctionCommand;
 
 export const useVsCode = () => {
   // TODO: What do we do if vscode is not defined?
