@@ -2,6 +2,7 @@ import ts from "typescript";
 
 export type RuiDataComponent = {
   id: string;
+  type: "data";
   component: string;
   propsAsState?: string[];
   props?: Record<string, any>;
@@ -11,18 +12,32 @@ export type RuiDataComponent = {
 
 export type RuiVisualComponent = {
   id: string;
+  type: "visual";
   component: string;
-
-  props?: Record<string, any> | Record<string, any>[];
-  events?: Record<string, any> | Record<string, any>[];
+  props?: Record<string, any>;
+  events?: Record<string, any>;
   propsAsState?: string[];
   childContainers?: Record<string, RuiVisualComponent[]>;
+};
+
+export type RuiDependency = {
+  module: string;
+  name: string;
+  importName?: string;
+  namedImport: boolean;
+};
+
+export type RuiTypeDeclaration = {
+  type: string;
+  optional: boolean;
+  dependencies: RuiDependency[];
 };
 
 export type RuiJSONFormat = {
   componentLibrary: string;
   eventHandlers: string;
   id: string;
+  interface: Record<string, RuiTypeDeclaration>;
   components: RuiDataComponent[];
   composition: RuiVisualComponent[];
 };

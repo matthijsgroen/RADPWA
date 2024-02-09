@@ -17,6 +17,11 @@
       {
         "command": "rad-generator.radEditor",
         "title": "Rapid Application Development (RAD) Editor"
+      },
+      {
+        "command": "rui.showSource",
+        "title": "Show TSX Source",
+        "icon": "$(file-code)"
       }
     ],
     "customEditors": [
@@ -30,7 +35,16 @@
         ],
         "priority": "default"
       }
-    ]
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "when": "resourcePath =~ /\\.rui\\.tsx$/ && editorLangId != typescriptreact",
+          "command": "rui.showSource",
+          "group": "navigation"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "yarn run compile",

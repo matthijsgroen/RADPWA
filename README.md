@@ -16,3 +16,20 @@ Expose components for a command pallette from libraries, compose a UI, compile t
 Take into account nesting, props, data-types.
 
 Try to build the studio application using its own RAD Compiler :-)
+
+## Setup
+
+```
+yarn install
+yarn build
+
+# in first terminal
+cd packages/editor
+yarn watch
+
+# in second terminal
+cd packages/vscode-rui-editor
+yarn build
+```
+
+Open the 'extension.ts' in VS-Code, and press `F5` to load an extension host and test the editor.

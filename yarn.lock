@@ -1306,16 +1306,34 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rui/parcel-transformer-rui-react@workspace:packages/parcel-transformer-rui-react":
+"@rui/demo-app@workspace:packages/rui-demo-app":
   version: 0.0.0-use.local
-  resolution: "@rui/parcel-transformer-rui-react@workspace:packages/parcel-transformer-rui-react"
+  resolution: "@rui/demo-app@workspace:packages/rui-demo-app"
   dependencies:
-    "@parcel/plugin": "npm:2.11.0"
-    "@rui/react-compiler": "workspace:^"
-    "@types/node": "npm:^20.11.4"
-    parcel: "npm:2.11.0"
-    prettier: "npm:^3.2.2"
-    typescript: "npm:~5.3.3"
+    "@rui/transform": "workspace:^"
+    "@types/react-dom": "npm:^18.2.18"
+    parcel: "npm:^2.11.0"
+    react: "npm:^18.2.0"
+    react-dom: "npm:^18.2.0"
+  languageName: unknown
+  linkType: soft
+
+"@rui/editor@workspace:packages/editor":
+  version: 0.0.0-use.local
+  resolution: "@rui/editor@workspace:packages/editor"
+  dependencies:
+    "@rui/prime-react": "workspace:^"
+    "@rui/transform": "workspace:^"
+    "@types/react-dom": "npm:^18.2.18"
+    highlight.js: "npm:^11.9.0"
+    immer: "npm:^10.0.3"
+    parcel: "npm:^2.11.0"
+    postcss: "npm:^8.4.33"
+    primeicons: "npm:^6.0.1"
+    primereact: "npm:^10.3.1"
+    react: "npm:^18.2.0"
+    react-dom: "npm:^18.2.0"
+    tailwindcss: "npm:^3.4.1"
   languageName: unknown
   linkType: soft
 
@@ -1329,17 +1347,6 @@ __metadata:
   peerDependencies:
     react: ^18.2.0
     react-dom: ^18.2.0
-  languageName: unknown
-  linkType: soft
-
-"@rui/react-compiler@workspace:^, @rui/react-compiler@workspace:packages/rui-react-compiler":
-  version: 0.0.0-use.local
-  resolution: "@rui/react-compiler@workspace:packages/rui-react-compiler"
-  dependencies:
-    "@types/node": "npm:^20.11.4"
-    parcel: "npm:2.11.0"
-    prettier: "npm:^3.2.2"
-    typescript: "npm:~5.3.3"
   languageName: unknown
   linkType: soft
 
@@ -1538,15 +1545,6 @@ __metadata:
   dependencies:
     undici-types: "npm:~5.26.4"
   checksum: 10c0/7ca4b3f8eb176ef3351292636717649c0e2044109b91453477dbe0a25e4b8febe2bb965e183c24088c41f113256ed87662bfce7782a8ab9b1da19542ed247d00
-  languageName: node
-  linkType: hard
-
-"@types/node@npm:^20.11.4":
-  version: 20.11.4
-  resolution: "@types/node@npm:20.11.4"
-  dependencies:
-    undici-types: "npm:~5.26.4"
-  checksum: 10c0/af6e1ad4d8f210d06d6db6c85b9aba25b022b493a4f2289e5ac693b418de746db812ab1537096e10e7cb7b78f1d835a06e61f31d93ebe36ef116bfbbf8f04c97
   languageName: node
   linkType: hard
 
@@ -3354,6 +3352,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"immer@npm:^10.0.3":
+  version: 10.0.3
+  resolution: "immer@npm:10.0.3"
+  checksum: 10c0/282a4f8479a40f7d12b2b3243c095e3e892bf99058e2ffcdd6b8e9fd143e6a90f2717ab9b6c8b97c927ffb8054465c8f647056f41660dbfd672e240cf1063503
+  languageName: node
+  linkType: hard
+
 "import-fresh@npm:^3.2.1, import-fresh@npm:^3.3.0":
   version: 3.3.0
   resolution: "import-fresh@npm:3.3.0"
@@ -4550,7 +4555,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"parcel@npm:2.11.0, parcel@npm:^2.11.0":
+"parcel@npm:^2.11.0":
   version: 2.11.0
   resolution: "parcel@npm:2.11.0"
   dependencies:
@@ -4793,7 +4798,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prettier@npm:^3.2.2, prettier@npm:^3.2.4":
+"prettier@npm:^3.2.4":
   version: 3.2.4
   resolution: "prettier@npm:3.2.4"
   bin:
@@ -4810,6 +4815,13 @@ __metadata:
     ansi-styles: "npm:^5.0.0"
     react-is: "npm:^18.0.0"
   checksum: 10c0/edc5ff89f51916f036c62ed433506b55446ff739358de77207e63e88a28ca2894caac6e73dcb68166a606e51c8087d32d400473e6a9fdd2dbe743f46c9c0276f
+  languageName: node
+  linkType: hard
+
+"primeicons@npm:^6.0.1":
+  version: 6.0.1
+  resolution: "primeicons@npm:6.0.1"
+  checksum: 10c0/9f59473d9b7f3b5aad1a3c7050fce8c06503f21586a67d3ed1fd362a9fad42a114c89b6e0f8fd7c94d71d090962b53181a086fe07a68a5535fa348fdbf63e641
   languageName: node
   linkType: hard
 
@@ -5387,24 +5399,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"studio@workspace:packages/app":
-  version: 0.0.0-use.local
-  resolution: "studio@workspace:packages/app"
-  dependencies:
-    "@rui/prime-react": "workspace:^"
-    "@rui/react-compiler": "workspace:^"
-    "@rui/transform": "workspace:^"
-    "@types/react-dom": "npm:^18.2.18"
-    highlight.js: "npm:^11.9.0"
-    parcel: "npm:^2.11.0"
-    postcss: "npm:^8.4.33"
-    primereact: "npm:^10.3.1"
-    react: "npm:^18.2.0"
-    react-dom: "npm:^18.2.0"
-    tailwindcss: "npm:^3.4.1"
-  languageName: unknown
-  linkType: soft
-
 "sucrase@npm:^3.32.0":
   version: 3.35.0
   resolution: "sucrase@npm:3.35.0"
@@ -5655,7 +5649,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:^5.3.3, typescript@npm:~5.3.3":
+"typescript@npm:^5.3.3":
   version: 5.3.3
   resolution: "typescript@npm:5.3.3"
   bin:
@@ -5665,7 +5659,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@npm%3A^5.3.3#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A~5.3.3#optional!builtin<compat/typescript>":
+"typescript@patch:typescript@npm%3A^5.3.3#optional!builtin<compat/typescript>":
   version: 5.3.3
   resolution: "typescript@patch:typescript@npm%3A5.3.3#optional!builtin<compat/typescript>::version=5.3.3&hash=e012d7"
   bin:

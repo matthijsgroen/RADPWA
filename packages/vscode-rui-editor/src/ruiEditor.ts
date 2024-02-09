@@ -6,10 +6,33 @@ import {
   type RuiJSONFormat,
   convertRuiToJson,
   getProjectComponentsFromType,
+  convertJsonToRui,
+  defineScopeType,
+  getFlatComponentList,
 } from "@rui/transform";
 
+const getEventHandlerFileUri = (
+  document: vscode.TextDocument,
+  handlerFileDefinition: string,
+): vscode.Uri => {
+  // TODO: Requires some major refactor and robustness..
+  // This is just a quick hacky solution to get the proper file open for now
+
+  const pathElements = handlerFileDefinition.split("/");
+  const fileName = pathElements.at(-1);
+  const path = document.uri.path.split("/");
+  path.pop();
+  path.push(`${fileName}.ts`);
+
+  return vscode.Uri.file(path.join("/"));
+};
+
 export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
-  constructor(private readonly context: vscode.ExtensionContext) {}
+  private printer: ts.Printer;
+
+  constructor(private readonly context: vscode.ExtensionContext) {
+    this.printer = ts.createPrinter();
+  }
 
   private static readonly viewType = "ruiCustoms.ruiEditor";
 
@@ -28,7 +51,6 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
     _token: vscode.CancellationToken,
   ): void | Thenable<void> {
     // Open the document editor and custom text editor side by side
-    // vscode.window.showTextDocument(document, vscode.ViewColumn.Beside);
 
     vscode.workspace
       .findFiles("rapid-components.tsx", undefined, 1)
@@ -59,12 +81,36 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
         );
 
         // Receive message from the webview.
-        webviewPanel.webview.onDidReceiveMessage((message) => {
+        webviewPanel.webview.onDidReceiveMessage(async (message) => {
           switch (message.type.toString()) {
             case "EDIT_COMMAND":
               const receivedData = message.data;
               console.log("** Received updated JSON from the webview **");
-              this.editDocument(webviewPanel, document, receivedData, vcl);
+              const Rui = await convertJsonToRui(receivedData, vcl);
+              this.editDocument(webviewPanel, document, Rui, vcl);
+              return;
+            case "OPEN_FUNCTION":
+              const functionName = message.data;
+              console.log(
+                "** Received request to open function **",
+                functionName,
+              );
+
+              const jsonDocument = this.getDocumentAsJson(document, vcl);
+              const uri = getEventHandlerFileUri(
+                document,
+                jsonDocument.eventHandlers,
+              );
+              let doc = await vscode.workspace.openTextDocument(uri);
+              vscode.window
+                .showTextDocument(doc, vscode.ViewColumn.Beside)
+                .then(() => {
+                  vscode.commands.executeCommand(
+                    "workbench.action.quickOpen",
+                    `@${functionName}`,
+                  );
+                });
+
               return;
           }
         });
@@ -97,9 +143,22 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
       type: "UPDATE_COMPONENTS",
       data: safeVcl,
     });
+    const jsonDocument = this.getDocumentAsJson(document, vcl);
     webviewPanel.webview.postMessage({
       type: "UPDATE_COMMAND",
-      data: this.getDocumentAsJson(document, vcl),
+      data: jsonDocument,
+    });
+    const componentList = getFlatComponentList(jsonDocument);
+    const scopeType = defineScopeType(componentList, vcl, false, false);
+    const typeInfo = this.printer.printNode(
+      ts.EmitHint.Unspecified,
+      scopeType,
+      ts.createSourceFile("t.tsx", "", ts.ScriptTarget.Latest),
+    );
+
+    webviewPanel.webview.postMessage({
+      type: "UPDATE_SCOPE_TYPE",
+      data: typeInfo,
     });
   }
 
@@ -108,7 +167,7 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
       vscode.Uri.joinPath(
         this.context.extensionUri,
         "media",
-        "index.048cd1c8.js",
+        "index.e3dcddad.js",
       ),
     );
 
@@ -116,7 +175,7 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
       vscode.Uri.joinPath(
         this.context.extensionUri,
         "media",
-        "index.59a8f4de.css",
+        "index.6fc39b01.css",
       ),
     );
 
@@ -149,7 +208,7 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
   private editDocument(
     webviewPanel: vscode.WebviewPanel,
     document: vscode.TextDocument,
-    json: RuiJSONFormat,
+    Rui: string,
     vcl: ComponentLibraryMetaInformation,
   ) {
     const edit = new vscode.WorkspaceEdit();
@@ -160,7 +219,7 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
     edit.replace(
       document.uri,
       new vscode.Range(0, 0, document.lineCount, 0),
-      JSON.stringify(json, null, 2),
+      Rui,
     );
 
     // Apply the edits
