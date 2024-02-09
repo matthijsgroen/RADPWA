@@ -51,7 +51,6 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
     _token: vscode.CancellationToken,
   ): void | Thenable<void> {
     // Open the document editor and custom text editor side by side
-    vscode.window.showTextDocument(document, vscode.ViewColumn.Beside);
 
     vscode.workspace
       .findFiles("rapid-components.tsx", undefined, 1)
@@ -103,7 +102,14 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
                 jsonDocument.eventHandlers,
               );
               let doc = await vscode.workspace.openTextDocument(uri);
-              vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
+              vscode.window
+                .showTextDocument(doc, vscode.ViewColumn.Beside)
+                .then(() => {
+                  vscode.commands.executeCommand(
+                    "workbench.action.quickOpen",
+                    `@${functionName}`,
+                  );
+                });
 
               return;
           }
