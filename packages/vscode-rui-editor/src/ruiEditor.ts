@@ -51,7 +51,6 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
     _token: vscode.CancellationToken,
   ): void | Thenable<void> {
     // Open the document editor and custom text editor side by side
-    vscode.window.showTextDocument(document, vscode.ViewColumn.Beside);
 
     vscode.workspace
       .findFiles("rapid-components.tsx", undefined, 1)
