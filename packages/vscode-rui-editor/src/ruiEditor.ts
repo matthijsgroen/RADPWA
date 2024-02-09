@@ -103,7 +103,14 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
                 jsonDocument.eventHandlers,
               );
               let doc = await vscode.workspace.openTextDocument(uri);
-              vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
+              vscode.window
+                .showTextDocument(doc, vscode.ViewColumn.Beside)
+                .then(() => {
+                  vscode.commands.executeCommand(
+                    "workbench.action.quickOpen",
+                    `@${functionName}`,
+                  );
+                });
 
               return;
           }
