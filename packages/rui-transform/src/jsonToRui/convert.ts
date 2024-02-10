@@ -769,6 +769,18 @@ const writeCompositionTree = (
 const createCommentBlock = (lines: string[]): string =>
   ["*", ...lines.map((l) => `* ${l}`), "*"].join("\n");
 
+const conditionalStatements = <T>(
+  condition: T,
+  ...statements: ((
+    value: Exclude<T, undefined | null>,
+  ) => ts.Statement | ts.Statement[])[]
+): ts.Statement[] =>
+  condition
+    ? statements.flatMap((statement) =>
+        statement(condition as Exclude<T, undefined | null>),
+      )
+    : [];
+
 export const convertJsonToRui = (
   structure: RuiJSONFormat,
   vcl: ComponentLibraryMetaInformation,
@@ -800,11 +812,20 @@ export const convertJsonToRui = (
         ]),
         true,
       ),
-      helpersImport(),
-      componentsImport(structure.componentLibrary),
-      eventHandlersImport(structure.eventHandlers),
-      ...defineComponentTypes(),
-      ...(hasProps ? [defineInterface(structure.interface)] : []),
+      ...conditionalStatements(
+        structure.componentLibrary,
+        () => helpersImport(),
+        (value) => componentsImport(value),
+      ),
+      ...conditionalStatements(structure.eventHandlers, (handlers) =>
+        eventHandlersImport(handlers),
+      ),
+      ...conditionalStatements(structure.componentLibrary, () =>
+        defineComponentTypes(),
+      ),
+      ...conditionalStatements(hasProps, () =>
+        defineInterface(structure.interface),
+      ),
       defineScopeType(visualFlatComponentList, vcl, hasProps),
       createComponentFunction(structure.id, hasProps, [
         ...wireVisualComponentsToReactComponents(visualFlatComponentList, vcl),

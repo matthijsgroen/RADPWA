@@ -8,6 +8,7 @@ import {
 } from "../compiler-types";
 import { capitalize, uncapitalize } from "../string-utils";
 import { valueToJSON } from "../value-utils";
+import { basename } from "path";
 
 const getPropertiesFor = (
   properties: ts.ObjectLiteralExpression | undefined,
@@ -462,9 +463,10 @@ export const convertRuiToJson = (
   let componentImport = undefined as ts.Identifier | undefined;
   let propertiesAsState: Record<string, string[]> = {};
   let interfaceDefinition: ts.TypeLiteralNode | undefined;
-  let componentLibrary = "";
-  let eventHandlers = "";
-  let id = "";
+  let componentLibrary: string | null = null;
+  let eventHandlers: string | null = null;
+
+  let id = basename(fileName, ".rui.tsx");
 
   ts.forEachChild(sourceFile, (node) => {
     if (

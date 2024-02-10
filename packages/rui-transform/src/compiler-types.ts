@@ -34,8 +34,8 @@ export type RuiTypeDeclaration = {
 };
 
 export type RuiJSONFormat = {
-  componentLibrary: string;
-  eventHandlers: string;
+  componentLibrary: string | null;
+  eventHandlers: string | null;
   id: string;
   interface: Record<string, RuiTypeDeclaration>;
   components: RuiDataComponent[];
