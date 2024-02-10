@@ -87,7 +87,7 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
               const receivedData = message.data;
               console.log("** Received updated JSON from the webview **");
               const Rui = await convertJsonToRui(receivedData, vcl);
-              this.editDocument(webviewPanel, document, Rui, vcl);
+              this.editDocument(document, Rui);
               return;
             case "OPEN_FUNCTION":
               const functionName = message.data;
@@ -97,6 +97,12 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
               );
 
               const jsonDocument = this.getDocumentAsJson(document, vcl);
+
+              if (jsonDocument.eventHandlers === null) {
+                // Generate event file
+                return;
+              }
+
               const uri = getEventHandlerFileUri(
                 document,
                 jsonDocument.eventHandlers,
@@ -205,15 +211,8 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
 			</html>`;
   }
 
-  private editDocument(
-    webviewPanel: vscode.WebviewPanel,
-    document: vscode.TextDocument,
-    Rui: string,
-    vcl: ComponentLibraryMetaInformation,
-  ) {
+  private editDocument(document: vscode.TextDocument, Rui: string) {
     const edit = new vscode.WorkspaceEdit();
-
-    console.log("** Replacing document **");
 
     // Replace the entire document
     edit.replace(
@@ -224,11 +223,6 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
 
     // Apply the edits
     vscode.workspace.applyEdit(edit);
-
-    // Update the webview
-    // this.updateWebview(webviewPanel, document, vcl, sav);
-
-    console.log("** Updated succesfully **");
   }
 
   private getDocumentAsJson(
@@ -237,6 +231,8 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
   ): RuiJSONFormat {
     const text = document.getText();
 
-    return convertRuiToJson(document.fileName, text, vcl);
+    const result = convertRuiToJson(document.fileName, text, vcl);
+
+    return result;
   }
 }

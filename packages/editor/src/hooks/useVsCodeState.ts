@@ -40,7 +40,7 @@ export const useVsCodeState = <T extends Record<string, unknown>>(
     const value = event.data.data;
     const key = dataMapper[type];
     if (key) {
-      const state = getState();
+      const state = getState() ?? initialState;
       setState({ ...state, [key]: value });
       updateState((v) => (v + 1) % 4);
     }
