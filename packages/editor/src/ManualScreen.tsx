@@ -1,10 +1,11 @@
 import { Pane } from "~src/components/Pane";
 import { Panel } from "primereact/panel";
 import { Splitter, SplitterPanel } from "primereact/splitter";
-import React from "react";
+import React, { useState } from "react";
 import { TabPanel, TabView } from "primereact/tabview";
 import { DataTable, DataTableRowEditCompleteEvent } from "primereact/datatable";
 import { Column, ColumnEvent } from "primereact/column";
+import { Dialog } from "primereact/dialog";
 import ComponentTreeView from "./components/ComponentTreeView";
 import { PrimeIcons } from "primereact/api";
 import {
@@ -39,8 +40,7 @@ import {
 } from "./mutations/updateInterface";
 import { Button } from "primereact/button";
 import { useVsCodeState } from "./hooks/useVsCodeState";
-import { DialogProvider, useDialog } from "./components/Dialog/DialogContext";
-import Dialog from "./components/Dialog/Dialog";
+import { ListBox } from "primereact/listbox";
 
 const stringValue = (
   data: PropertyItem,
@@ -223,152 +223,192 @@ const mainScreen = () => {
     postMessage({ type: CommandType.OPEN_FUNCTION, data: name });
   };
 
+  const [addDialogOpen, setAddDialogOpen] = useState<
+    | { open: false }
+    | {
+        open: true;
+        parentComponent: null | string;
+        containerName: string;
+        nodeType: "data" | "visual";
+      }
+  >({
+    open: false,
+  });
+
   return (
-    <DialogProvider>
-      <Pane>
-        <Splitter layout={"horizontal"}>
-          <SplitterPanel minSize={10}>
-            <Pane>
-              <Panel header={"View"}>
-                <TabView
-                  activeIndex={activeStructureTab}
-                  onTabChange={(e) => setActiveStructureTab(e.index)}
-                >
-                  <TabPanel header="Structure">
-                    {screenStructure &&
-                      componentsStructure &&
-                      Object.keys(componentsStructure).length > 0 && (
-                        <ComponentTreeView
-                          ruiComponents={screenStructure}
-                          viewTreeState={viewTreeState}
-                          componentsStructure={componentsStructure}
-                          setVewTreeState={setViewTreeState}
-                          selectedComponent={setSelectedComponentId}
-                        />
-                      )}
-                    {screenStructure &&
-                      componentsStructure &&
-                      Object.keys(componentsStructure).length === 0 && (
-                        <p>
-                          No component library found. Please create a{" "}
-                          <code>rapid-components.tsx</code> file in the root of
-                          your package
-                        </p>
-                      )}
-                    {!screenStructure && <ProgressSpinner />}
-                  </TabPanel>
-                  <TabPanel header="Interface">
-                    <DataTable
-                      value={componentInterfaceList}
-                      size="small"
-                      stripedRows
-                      scrollable
-                      scrollHeight="100%"
-                      editMode="row"
-                      onRowEditComplete={updateInterfaceProperty}
-                    >
-                      <Column
-                        field="name"
-                        header="Name"
-                        editor={(options) =>
-                          cellTextEditor(options, "alphanum")
-                        }
-                      ></Column>
-                      <Column
-                        field="type"
-                        header="Type"
-                        editor={(options) => cellIntelliSenseType(options)}
-                        body={(e) => e.type.type}
-                      ></Column>
-                      <Column
-                        field="optional"
-                        header="Optional"
-                        editor={(options) => cellBooleanEditor(options)}
-                      ></Column>
-                      <Column rowEditor={true}></Column>
-                      <Column
-                        body={(item) => (
-                          <Button
-                            icon={PrimeIcons.TRASH}
-                            severity="secondary"
-                            rounded
-                            link
-                            onClick={() => removeInterfaceProperty(item.name)}
-                          />
-                        )}
-                      ></Column>
-                    </DataTable>
-                    <div className="flex flex-wrap justify-content-center gap-3 my-4">
-                      <Button
-                        rounded
-                        icon={PrimeIcons.PLUS}
-                        aria-label="Add interface property"
-                        onClick={() => {
-                          addInterfaceProperty();
+    <Pane>
+      <Splitter layout={"horizontal"}>
+        <SplitterPanel minSize={10}>
+          <Pane>
+            <Panel header={"View"}>
+              <TabView
+                activeIndex={activeStructureTab}
+                onTabChange={(e) => setActiveStructureTab(e.index)}
+              >
+                <TabPanel header="Structure">
+                  {screenStructure &&
+                    componentsStructure &&
+                    Object.keys(componentsStructure).length > 0 && (
+                      <ComponentTreeView
+                        ruiComponents={screenStructure}
+                        viewTreeState={viewTreeState}
+                        componentsStructure={componentsStructure}
+                        setVewTreeState={setViewTreeState}
+                        selectedComponent={setSelectedComponentId}
+                        onAddNodeClick={(parent, container, nodeType) => {
+                          setAddDialogOpen({
+                            open: true,
+                            parentComponent: parent,
+                            containerName: container,
+                            nodeType,
+                          });
                         }}
                       />
-                    </div>
-                    <CodeHighlighter code={scopeType} />
-                  </TabPanel>
-                </TabView>
-              </Panel>
-            </Pane>
-          </SplitterPanel>
-          <SplitterPanel>
-            <Panel
-              header={`Inspector (${selectedComponent ? selectedComponent.id : "none"})`}
-              className="w-full"
-            >
-              <TabView
-                activeIndex={activeObjectTab}
-                onTabChange={(e) => setActiveObjectTab(e.index)}
-              >
-                <TabPanel header="Properties">
-                  <DataTable
-                    value={componentPropertyList}
-                    size="small"
-                    stripedRows
-                    scrollable
-                    scrollHeight="100%"
-                    editMode="cell"
-                  >
-                    <Column field="name" header="Name"></Column>
-                    <Column
-                      // field="value"
-                      header="Value"
-                      body={(data) => stringValue(data, selectedComponent)}
-                      editor={propertyEdit}
-                      onCellEditComplete={onCellEditComplete}
-                    ></Column>
-                  </DataTable>
+                    )}
+                  {screenStructure &&
+                    componentsStructure &&
+                    Object.keys(componentsStructure).length === 0 && (
+                      <p>
+                        No component library found. Please create a{" "}
+                        <code>rapid-components.tsx</code> file in the root of
+                        your package
+                      </p>
+                    )}
+                  {!screenStructure && <ProgressSpinner />}
                 </TabPanel>
-                <TabPanel header="Events">
+                <TabPanel header="Interface">
                   <DataTable
-                    value={componentEventList}
+                    value={componentInterfaceList}
                     size="small"
                     stripedRows
                     scrollable
                     scrollHeight="100%"
+                    editMode="row"
+                    onRowEditComplete={updateInterfaceProperty}
                   >
-                    <Column field="name" header="Name"></Column>
                     <Column
-                      // field="value"
-                      header="Value"
-                      body={(data) =>
-                        stringValue(data, selectedComponent, openExternal)
-                      }
-                      editor={propertyEdit}
-                      onCellEditComplete={onCellEditComplete}
+                      field="name"
+                      header="Name"
+                      editor={(options) => cellTextEditor(options, "alphanum")}
+                    ></Column>
+                    <Column
+                      field="type"
+                      header="Type"
+                      editor={(options) => cellIntelliSenseType(options)}
+                      body={(e) => e.type.type}
+                    ></Column>
+                    <Column
+                      field="optional"
+                      header="Optional"
+                      editor={(options) => cellBooleanEditor(options)}
+                    ></Column>
+                    <Column rowEditor={true}></Column>
+                    <Column
+                      body={(item) => (
+                        <Button
+                          icon={PrimeIcons.TRASH}
+                          severity="secondary"
+                          rounded
+                          link
+                          onClick={() => removeInterfaceProperty(item.name)}
+                        />
+                      )}
                     ></Column>
                   </DataTable>
+                  <div className="flex flex-wrap justify-content-center gap-3 my-4">
+                    <Button
+                      rounded
+                      icon={PrimeIcons.PLUS}
+                      aria-label="Add interface property"
+                      onClick={() => {
+                        addInterfaceProperty();
+                      }}
+                    />
+                  </div>
+                  <CodeHighlighter code={scopeType} />
                 </TabPanel>
               </TabView>
             </Panel>
-          </SplitterPanel>
-        </Splitter>
-      </Pane>
-      <Dialog />
-    </DialogProvider>
+          </Pane>
+        </SplitterPanel>
+        <SplitterPanel>
+          <Panel
+            header={`Inspector (${selectedComponent ? selectedComponent.id : "none"})`}
+            className="w-full"
+          >
+            <TabView
+              activeIndex={activeObjectTab}
+              onTabChange={(e) => setActiveObjectTab(e.index)}
+            >
+              <TabPanel header="Properties">
+                <DataTable
+                  value={componentPropertyList}
+                  size="small"
+                  stripedRows
+                  scrollable
+                  scrollHeight="100%"
+                  editMode="cell"
+                >
+                  <Column field="name" header="Name"></Column>
+                  <Column
+                    // field="value"
+                    header="Value"
+                    body={(data) => stringValue(data, selectedComponent)}
+                    editor={propertyEdit}
+                    onCellEditComplete={onCellEditComplete}
+                  ></Column>
+                </DataTable>
+              </TabPanel>
+              <TabPanel header="Events">
+                <DataTable
+                  value={componentEventList}
+                  size="small"
+                  stripedRows
+                  scrollable
+                  scrollHeight="100%"
+                >
+                  <Column field="name" header="Name"></Column>
+                  <Column
+                    // field="value"
+                    header="Value"
+                    body={(data) =>
+                      stringValue(data, selectedComponent, openExternal)
+                    }
+                    editor={propertyEdit}
+                    onCellEditComplete={onCellEditComplete}
+                  ></Column>
+                </DataTable>
+              </TabPanel>
+            </TabView>
+          </Panel>
+        </SplitterPanel>
+      </Splitter>
+      <Dialog
+        visible={addDialogOpen.open}
+        onHide={() => setAddDialogOpen({ open: false })}
+      >
+        {componentsStructure && (
+          <ListBox
+            options={Object.entries(componentsStructure)
+              .map(([name, info]) => ({
+                name,
+                info,
+              }))
+              .filter((item) => {
+                if (!addDialogOpen.open) {
+                  return false;
+                }
+                const properType =
+                  (item.info.isVisual && addDialogOpen.nodeType === "visual") ||
+                  (!item.info.isVisual && addDialogOpen.nodeType === "data");
+
+                return properType;
+              })}
+            optionLabel="name"
+          />
+        )}
+      </Dialog>
+    </Pane>
   );
 };
 export default mainScreen;

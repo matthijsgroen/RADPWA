@@ -11,14 +11,16 @@ import { TreeNode } from "primereact/treenode";
 import { IconType } from "primereact/utils";
 import React from "react";
 import { transformToTreeNode } from "~src/utils";
-import { useDialog } from "./Dialog/DialogContext";
 
 export type ComponentTreeNode = {
   key: string;
-  type?: string;
+  type: "data" | "visual";
   label: string;
   icon?: IconType<TreeNode>;
-  canAddEntry?: boolean;
+
+  isContainer: boolean;
+  containerParent?: null | string;
+
   data: RuiVisualComponent | RuiDataComponent | null;
   children?: ComponentTreeNode[];
 };
@@ -29,17 +31,21 @@ type TreeViewProps = {
   viewTreeState: Record<string, boolean>;
   setVewTreeState: (newState: Record<string, boolean>) => void;
   selectedComponent: (e: string | null) => void;
+  onAddNodeClick?: (
+    parent: null | string,
+    containerName: string,
+    nodeType: "data" | "visual",
+  ) => void;
 };
 
-export default function TreeView({
+const TreeView: React.FC<TreeViewProps> = ({
   ruiComponents,
   componentsStructure,
   viewTreeState,
   setVewTreeState,
   selectedComponent,
-}: TreeViewProps) {
-  const { showDialog } = useDialog();
-
+  onAddNodeClick,
+}) => {
   const components: ComponentTreeNode[] = [
     {
       key: "data-root",
@@ -47,7 +53,10 @@ export default function TreeView({
       icon: PrimeIcons.DATABASE,
       data: null,
       type: "data",
-      canAddEntry: true,
+
+      isContainer: true,
+      containerParent: null,
+
       children: transformToTreeNode(ruiComponents.components),
     },
     {
@@ -56,7 +65,10 @@ export default function TreeView({
       icon: PrimeIcons.PALETTE,
       data: null,
       type: "visual",
-      canAddEntry: true,
+
+      isContainer: true,
+      containerParent: null,
+
       children: transformToTreeNode(ruiComponents.composition),
     },
   ];
@@ -75,7 +87,7 @@ export default function TreeView({
           return (
             <div className="flex items-center justify-between w-full">
               <div>{componentTreeNode.label}</div>
-              {componentTreeNode.children && componentTreeNode.canAddEntry && (
+              {componentTreeNode.children && componentTreeNode.isContainer && (
                 <Button
                   icon="pi pi-plus"
                   rounded
@@ -84,14 +96,11 @@ export default function TreeView({
                   onClick={(e) => {
                     e.stopPropagation();
                     if (!componentsStructure) return;
-
-                    if (componentTreeNode.type === "visual") {
-                      showDialog(componentsStructure);
-                    }
-
-                    if (componentTreeNode.type === "data") {
-                      showDialog(componentsStructure);
-                    }
+                    onAddNodeClick?.(
+                      componentTreeNode.containerParent ?? null,
+                      componentTreeNode.key,
+                      componentTreeNode.type,
+                    );
                   }}
                 />
               )}
@@ -101,4 +110,6 @@ export default function TreeView({
       />
     </>
   );
-}
+};
+
+export default TreeView;

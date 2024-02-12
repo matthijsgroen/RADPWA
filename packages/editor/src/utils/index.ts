@@ -71,6 +71,8 @@ export const transformToTreeNode = (
       type: component.type,
       label: `${component.id} (${component.component})`,
       data: component,
+
+      isContainer: false,
     };
 
     if (component.childContainers) {
@@ -82,7 +84,9 @@ export const transformToTreeNode = (
           type: component.type,
           label: name,
           data: null,
-          canAddEntry: true,
+          isContainer: true,
+          containerParent: component.id,
+
           icon: PrimeIcons.FOLDER_OPEN,
           children: transformToTreeNode(container),
         };
