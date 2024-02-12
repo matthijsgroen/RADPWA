@@ -55,7 +55,8 @@
     "test": "vscode-test"
   },
   "dependencies": {
-    "@rui/transform": "workspace:^"
+    "@rui/transform": "workspace:^",
+    "get-relative-path": "^1.0.2"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.6",

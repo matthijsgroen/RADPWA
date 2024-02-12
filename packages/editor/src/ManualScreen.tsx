@@ -235,17 +235,27 @@ const mainScreen = () => {
                   onTabChange={(e) => setActiveStructureTab(e.index)}
                 >
                   <TabPanel header="Structure">
-                    {screenStructure ? (
-                      <ComponentTreeView
-                        ruiComponents={screenStructure}
-                        viewTreeState={viewTreeState}
-                        componentsStructure={componentsStructure}
-                        setVewTreeState={setViewTreeState}
-                        selectedComponent={setSelectedComponentId}
-                      />
-                    ) : (
-                      <ProgressSpinner />
-                    )}
+                    {screenStructure &&
+                      componentsStructure &&
+                      Object.keys(componentsStructure).length > 0 && (
+                        <ComponentTreeView
+                          ruiComponents={screenStructure}
+                          viewTreeState={viewTreeState}
+                          componentsStructure={componentsStructure}
+                          setVewTreeState={setViewTreeState}
+                          selectedComponent={setSelectedComponentId}
+                        />
+                      )}
+                    {screenStructure &&
+                      componentsStructure &&
+                      Object.keys(componentsStructure).length === 0 && (
+                        <p>
+                          No component library found. Please create a{" "}
+                          <code>rapid-components.tsx</code> file in the root of
+                          your package
+                        </p>
+                      )}
+                    {!screenStructure && <ProgressSpinner />}
                   </TabPanel>
                   <TabPanel header="Interface">
                     <DataTable

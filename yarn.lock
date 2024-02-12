@@ -3074,6 +3074,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"get-relative-path@npm:^1.0.2":
+  version: 1.0.2
+  resolution: "get-relative-path@npm:1.0.2"
+  checksum: 10c0/95f197eff2749bc819f1bcf0c5d012bf635870a74265ce1cd2c6905de24cbefcaa3df7be9cdf1df4db6387102ea002e402788df4a9b56f3fc1b9015ea60f44d2
+  languageName: node
+  linkType: hard
+
 "glob-parent@npm:^5.1.2, glob-parent@npm:~5.1.2":
   version: 5.1.2
   resolution: "glob-parent@npm:5.1.2"
@@ -5751,6 +5758,7 @@ __metadata:
     "@vscode/test-cli": "npm:^0.0.4"
     "@vscode/test-electron": "npm:^2.3.8"
     eslint: "npm:^8.56.0"
+    get-relative-path: "npm:^1.0.2"
     typescript: "npm:^5.3.3"
   languageName: unknown
   linkType: soft

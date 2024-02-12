@@ -828,10 +828,15 @@ export const convertJsonToRui = (
       ),
       defineScopeType(visualFlatComponentList, vcl, hasProps),
       createComponentFunction(structure.id, hasProps, [
-        ...wireVisualComponentsToReactComponents(visualFlatComponentList, vcl),
-        writeComponentProperties(fullFlatComponentList),
-        writeComponentEvents(fullFlatComponentList, vcl),
-        writeScope(visualFlatComponentList, vcl, hasProps),
+        ...conditionalStatements(fullFlatComponentList.length > 0, () => [
+          ...wireVisualComponentsToReactComponents(
+            visualFlatComponentList,
+            vcl,
+          ),
+          writeComponentProperties(fullFlatComponentList),
+          writeComponentEvents(fullFlatComponentList, vcl),
+          writeScope(visualFlatComponentList, vcl, hasProps),
+        ]),
 
         f.createReturnStatement(
           f.createParenthesizedExpression(

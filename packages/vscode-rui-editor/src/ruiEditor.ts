@@ -10,6 +10,7 @@ import {
   defineScopeType,
   getFlatComponentList,
 } from "@rui/transform";
+import getRelativePath from "get-relative-path";
 
 const getEventHandlerFileUri = (
   document: vscode.TextDocument,
@@ -50,28 +51,40 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
     webviewPanel: vscode.WebviewPanel,
     _token: vscode.CancellationToken,
   ): void | Thenable<void> {
-    // Open the document editor and custom text editor side by side
-
     vscode.workspace
       .findFiles("rapid-components.tsx", undefined, 1)
       .then((result) => {
-        const libPath = result[0].fsPath;
+        const libPath = result[0]?.fsPath;
+        const componentsPath: string | null = libPath
+          ? getRelativePath(document.fileName, libPath).slice(0, -4)
+          : null;
 
         const host = ts.createCompilerHost({ rootDir: "." });
         const program = ts.createProgram({
-          rootNames: [document.fileName, libPath],
+          rootNames: libPath
+            ? [document.fileName, libPath]
+            : [document.fileName],
           options: { rootDir: "." },
           host,
         });
-        const vcl = getProjectComponentsFromType(program, libPath);
-        const safeVCL = JSON.parse(
-          JSON.stringify(vcl, (key, value) => {
-            if (value && typeof value === "object" && ts.isTypeNode(value)) {
-              return undefined;
-            }
-            return value;
-          }),
-        );
+
+        const vcl = libPath
+          ? getProjectComponentsFromType(program, libPath)
+          : {};
+        const safeVCL = vcl
+          ? JSON.parse(
+              JSON.stringify(vcl, (key, value) => {
+                if (
+                  value &&
+                  typeof value === "object" &&
+                  ts.isTypeNode(value)
+                ) {
+                  return undefined;
+                }
+                return value;
+              }),
+            )
+          : {};
 
         webviewPanel.webview.options = {
           enableScripts: true,
@@ -96,7 +109,11 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
                 functionName,
               );
 
-              const jsonDocument = this.getDocumentAsJson(document, vcl);
+              const jsonDocument = this.getDocumentAsJson(
+                document,
+                vcl,
+                componentsPath,
+              );
 
               if (jsonDocument.eventHandlers === null) {
                 // Generate event file
@@ -124,7 +141,13 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
         const changeDocumentSubscription =
           vscode.workspace.onDidChangeTextDocument((e) => {
             if (e.document.uri.toString() === document.uri.toString()) {
-              this.updateWebview(webviewPanel, document, vcl, safeVCL);
+              this.updateWebview(
+                webviewPanel,
+                document,
+                vcl,
+                safeVCL,
+                componentsPath,
+              );
             }
           });
         // Make sure we get rid of the listener when our editor is closed.
@@ -133,7 +156,13 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
         });
 
         setTimeout(() => {
-          this.updateWebview(webviewPanel, document, vcl, safeVCL);
+          this.updateWebview(
+            webviewPanel,
+            document,
+            vcl,
+            safeVCL,
+            componentsPath,
+          );
         }, 500);
       });
   }
@@ -143,13 +172,14 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
     document: vscode.TextDocument,
     vcl: ComponentLibraryMetaInformation,
     safeVcl: ComponentLibraryMetaInformation,
+    componentsPath: string | null,
   ) {
     console.log("** Updating webview **");
     webviewPanel.webview.postMessage({
       type: "UPDATE_COMPONENTS",
       data: safeVcl,
     });
-    const jsonDocument = this.getDocumentAsJson(document, vcl);
+    const jsonDocument = this.getDocumentAsJson(document, vcl, componentsPath);
     webviewPanel.webview.postMessage({
       type: "UPDATE_COMMAND",
       data: jsonDocument,
@@ -228,10 +258,21 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
   private getDocumentAsJson(
     document: vscode.TextDocument,
     vcl: ComponentLibraryMetaInformation,
+    componentsPath: string | null,
   ): RuiJSONFormat {
     const text = document.getText();
 
     const result = convertRuiToJson(document.fileName, text, vcl);
+    if (result.componentLibrary === null && componentsPath) {
+      result.componentLibrary = componentsPath;
+    }
+
+    if (text.trim() === "") {
+      // initialize document
+      convertJsonToRui(result, vcl).then((tsxCode) => {
+        this.editDocument(document, tsxCode);
+      });
+    }
 
     return result;
   }
