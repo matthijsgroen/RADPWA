@@ -3,11 +3,12 @@
   "packageManager": "yarn@4.1.0",
   "version": "1.0.0-alpha",
   "dependencies": {
+    "prime-react": "^1.0.0",
+    "@rui/transform": "workspace:^",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@rui/transform": "workspace:^",
     "@types/react-dom": "^18.2.18",
     "parcel": "^2.11.0"
   },

@@ -27,7 +27,7 @@ export type ComponentTreeNode = {
 
 type TreeViewProps = {
   ruiComponents: RuiJSONFormat;
-  componentsStructure?: ComponentLibraryMetaInformation;
+  vcl: ComponentLibraryMetaInformation;
   viewTreeState: Record<string, boolean>;
   setVewTreeState: (newState: Record<string, boolean>) => void;
   selectedComponent: (e: string | null) => void;
@@ -40,7 +40,7 @@ type TreeViewProps = {
 
 const TreeView: React.FC<TreeViewProps> = ({
   ruiComponents,
-  componentsStructure,
+  vcl,
   viewTreeState,
   setVewTreeState,
   selectedComponent,
@@ -57,7 +57,7 @@ const TreeView: React.FC<TreeViewProps> = ({
       isContainer: true,
       containerParent: null,
 
-      children: transformToTreeNode(ruiComponents.components),
+      children: transformToTreeNode(ruiComponents.components, vcl),
     },
     {
       key: "view-root",
@@ -69,7 +69,7 @@ const TreeView: React.FC<TreeViewProps> = ({
       isContainer: true,
       containerParent: null,
 
-      children: transformToTreeNode(ruiComponents.composition),
+      children: transformToTreeNode(ruiComponents.composition, vcl),
     },
   ];
 
@@ -87,7 +87,7 @@ const TreeView: React.FC<TreeViewProps> = ({
           return (
             <div className="flex items-center justify-between w-full">
               <div>{componentTreeNode.label}</div>
-              {componentTreeNode.children && componentTreeNode.isContainer && (
+              {componentTreeNode.isContainer && (
                 <Button
                   icon="pi pi-plus"
                   rounded
@@ -95,7 +95,7 @@ const TreeView: React.FC<TreeViewProps> = ({
                   aria-label="Add"
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (!componentsStructure) return;
+                    if (!vcl) return;
                     onAddNodeClick?.(
                       componentTreeNode.containerParent ?? null,
                       componentTreeNode.key,

@@ -1,4 +1,5 @@
 import {
+  ComponentLibraryMetaInformation,
   ComponentMetaInformation,
   RuiDataComponent,
   RuiVisualComponent,
@@ -64,8 +65,10 @@ export const processComponentEvents = (
 // that can be used by the PrimeReact TreeView component
 export const transformToTreeNode = (
   components: (RuiVisualComponent | RuiDataComponent)[],
+  vcl: ComponentLibraryMetaInformation,
 ): ComponentTreeNode[] => {
   return components.map((component) => {
+    const componentInfo = vcl[component.component];
     let treeNode: ComponentTreeNode = {
       key: component.id,
       type: component.type,
@@ -75,10 +78,11 @@ export const transformToTreeNode = (
       isContainer: false,
     };
 
-    if (component.childContainers) {
+    if (Object.keys(componentInfo.childContainers).length > 0) {
       treeNode.children = Object.entries(
-        component.childContainers,
-      ).map<ComponentTreeNode>(([name, container]) => {
+        componentInfo.childContainers,
+      ).map<ComponentTreeNode>(([name]) => {
+        const container = component.childContainers?.[name];
         return {
           key: name,
           type: component.type,
@@ -88,7 +92,7 @@ export const transformToTreeNode = (
           containerParent: component.id,
 
           icon: PrimeIcons.FOLDER_OPEN,
-          children: transformToTreeNode(container),
+          children: container ? transformToTreeNode(container, vcl) : undefined,
         };
       });
     }

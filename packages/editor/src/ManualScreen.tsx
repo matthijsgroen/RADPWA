@@ -3,7 +3,7 @@ import { Panel } from "primereact/panel";
 import { Splitter, SplitterPanel } from "primereact/splitter";
 import React, { useState } from "react";
 import { TabPanel, TabView } from "primereact/tabview";
-import { DataTable, DataTableRowEditCompleteEvent } from "primereact/datatable";
+import { DataTable } from "primereact/datatable";
 import { Column, ColumnEvent } from "primereact/column";
 import { Dialog } from "primereact/dialog";
 import ComponentTreeView from "./components/ComponentTreeView";
@@ -41,6 +41,8 @@ import {
 import { Button } from "primereact/button";
 import { useVsCodeState } from "./hooks/useVsCodeState";
 import { ListBox } from "primereact/listbox";
+import { AddComponentPanel } from "./components/AddComponentPanel";
+import { addComponentToStructure } from "./mutations/addComponent";
 
 const stringValue = (
   data: PropertyItem,
@@ -98,6 +100,15 @@ const stringValue = (
   return `${stateMarker}${data.value} - ${data.type}`;
 };
 
+const getComponentById = (
+  componentId: string | null,
+  screenStructure: RuiJSONFormat | undefined,
+): RuiDataComponent | RuiVisualComponent | undefined =>
+  componentId
+    ? treeSearch(componentId, screenStructure?.components ?? []) ||
+      treeSearch(componentId, screenStructure?.composition ?? [])
+    : undefined;
+
 const mainScreen = () => {
   // Only works when the app is running in VSCode
   const { postMessage } = useVsCode();
@@ -139,11 +150,10 @@ const mainScreen = () => {
     },
   );
 
-  const selectedComponent: RuiVisualComponent | RuiDataComponent | undefined =
-    selectedComponentId
-      ? treeSearch(selectedComponentId, screenStructure?.components ?? []) ||
-        treeSearch(selectedComponentId, screenStructure?.composition ?? [])
-      : undefined;
+  const selectedComponent = getComponentById(
+    selectedComponentId,
+    screenStructure,
+  );
 
   const selectedComponentInfo =
     selectedComponent && componentsStructure
@@ -206,19 +216,6 @@ const mainScreen = () => {
     }
   };
 
-  const updateInterfaceProperty = (
-    event: DataTableRowEditCompleteEvent,
-  ): void => {
-    mutateScreenStructure(updateInterface(event));
-  };
-
-  const addInterfaceProperty = () => {
-    mutateScreenStructure(addPropertyToInterface());
-  };
-
-  const removeInterfaceProperty = (name: string) => {
-    mutateScreenStructure(removePropertyFromInterface(name));
-  };
   const openExternal = (type: "function", name: string) => {
     postMessage({ type: CommandType.OPEN_FUNCTION, data: name });
   };
@@ -252,7 +249,7 @@ const mainScreen = () => {
                       <ComponentTreeView
                         ruiComponents={screenStructure}
                         viewTreeState={viewTreeState}
-                        componentsStructure={componentsStructure}
+                        vcl={componentsStructure}
                         setVewTreeState={setViewTreeState}
                         selectedComponent={setSelectedComponentId}
                         onAddNodeClick={(parent, container, nodeType) => {
@@ -284,7 +281,9 @@ const mainScreen = () => {
                     scrollable
                     scrollHeight="100%"
                     editMode="row"
-                    onRowEditComplete={updateInterfaceProperty}
+                    onRowEditComplete={(event) =>
+                      mutateScreenStructure(updateInterface(event))
+                    }
                   >
                     <Column
                       field="name"
@@ -310,7 +309,11 @@ const mainScreen = () => {
                           severity="secondary"
                           rounded
                           link
-                          onClick={() => removeInterfaceProperty(item.name)}
+                          onClick={() =>
+                            mutateScreenStructure(
+                              removePropertyFromInterface(item.name),
+                            )
+                          }
                         />
                       )}
                     ></Column>
@@ -321,7 +324,7 @@ const mainScreen = () => {
                       icon={PrimeIcons.PLUS}
                       aria-label="Add interface property"
                       onClick={() => {
-                        addInterfaceProperty();
+                        mutateScreenStructure(addPropertyToInterface());
                       }}
                     />
                   </div>
@@ -385,26 +388,34 @@ const mainScreen = () => {
       </Splitter>
       <Dialog
         visible={addDialogOpen.open}
+        header={"Add component"}
         onHide={() => setAddDialogOpen({ open: false })}
       >
-        {componentsStructure && (
-          <ListBox
-            options={Object.entries(componentsStructure)
-              .map(([name, info]) => ({
-                name,
-                info,
-              }))
-              .filter((item) => {
-                if (!addDialogOpen.open) {
-                  return false;
-                }
-                const properType =
-                  (item.info.isVisual && addDialogOpen.nodeType === "visual") ||
-                  (!item.info.isVisual && addDialogOpen.nodeType === "data");
-
-                return properType;
-              })}
-            optionLabel="name"
+        {componentsStructure && addDialogOpen.open && (
+          <AddComponentPanel
+            componentLibrary={componentsStructure}
+            nodeType={addDialogOpen.nodeType}
+            parentComponent={
+              addDialogOpen.parentComponent
+                ? getComponentById(
+                    addDialogOpen.parentComponent,
+                    screenStructure,
+                  )?.component
+                : null
+            }
+            containerName={addDialogOpen.containerName}
+            onComponentSelection={(componentType) => {
+              // add componentType to child container
+              mutateScreenStructure(
+                addComponentToStructure(
+                  componentType,
+                  addDialogOpen.parentComponent,
+                  addDialogOpen.containerName,
+                  addDialogOpen.nodeType,
+                ),
+              );
+              setAddDialogOpen({ open: false });
+            }}
           />
         )}
       </Dialog>

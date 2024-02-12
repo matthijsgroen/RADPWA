@@ -1,6 +1,12 @@
 import React from "react";
 import { MainScreen } from "./ExperimentScreen.rui";
+import { PrimeReactProvider } from "primereact/api";
+import "primereact/resources/themes/lara-light-purple/theme.css";
 
 export const App = () => {
-  return <MainScreen />;
+  return (
+    <PrimeReactProvider>
+      <MainScreen />
+    </PrimeReactProvider>
+  );
 };
