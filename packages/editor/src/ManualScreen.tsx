@@ -40,9 +40,11 @@ import {
 } from "./mutations/updateInterface";
 import { Button } from "primereact/button";
 import { useVsCodeState } from "./hooks/useVsCodeState";
-import { ListBox } from "primereact/listbox";
 import { AddComponentPanel } from "./components/AddComponentPanel";
-import { addComponentToStructure } from "./mutations/addComponent";
+import {
+  addComponentToStructure,
+  removeComponentFromStructure,
+} from "./mutations/addComponent";
 
 const stringValue = (
   data: PropertyItem,
@@ -250,7 +252,7 @@ const mainScreen = () => {
                         ruiComponents={screenStructure}
                         viewTreeState={viewTreeState}
                         vcl={componentsStructure}
-                        setVewTreeState={setViewTreeState}
+                        setViewTreeState={setViewTreeState}
                         selectedComponent={setSelectedComponentId}
                         onAddNodeClick={(parent, container, nodeType) => {
                           setAddDialogOpen({
@@ -259,6 +261,11 @@ const mainScreen = () => {
                             containerName: container,
                             nodeType,
                           });
+                        }}
+                        onRemoveNodeClick={(key, type) => {
+                          mutateScreenStructure(
+                            removeComponentFromStructure(key, type),
+                          );
                         }}
                       />
                     )}

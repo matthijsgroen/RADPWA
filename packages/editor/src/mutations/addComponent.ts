@@ -86,3 +86,29 @@ export const addComponentToStructure = (
       }
     }
   });
+
+export const removeComponentFromStructure = (
+  componentKey: string,
+  nodeType: "data" | "visual",
+) =>
+  produce<RuiJSONFormat>((draft) => {
+    const remove = (items: RuiDataComponent[] | RuiVisualComponent[]): void => {
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].id === componentKey) {
+          items.splice(i, 1);
+          return;
+        }
+        if (items[i].childContainers) {
+          for (const containerName in items[i].childContainers) {
+            remove(items[i].childContainers![containerName]);
+          }
+        }
+      }
+    };
+
+    if (nodeType === "data") {
+      remove(draft.components);
+    } else {
+      remove(draft.composition);
+    }
+  });

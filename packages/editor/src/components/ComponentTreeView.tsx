@@ -29,22 +29,24 @@ type TreeViewProps = {
   ruiComponents: RuiJSONFormat;
   vcl: ComponentLibraryMetaInformation;
   viewTreeState: Record<string, boolean>;
-  setVewTreeState: (newState: Record<string, boolean>) => void;
+  setViewTreeState: (newState: Record<string, boolean>) => void;
   selectedComponent: (e: string | null) => void;
   onAddNodeClick?: (
     parent: null | string,
     containerName: string,
     nodeType: "data" | "visual",
   ) => void;
+  onRemoveNodeClick?: (nodeKey: string, nodeType: "data" | "visual") => void;
 };
 
 const TreeView: React.FC<TreeViewProps> = ({
   ruiComponents,
   vcl,
   viewTreeState,
-  setVewTreeState,
+  setViewTreeState,
   selectedComponent,
   onAddNodeClick,
+  onRemoveNodeClick,
 }) => {
   const components: ComponentTreeNode[] = [
     {
@@ -80,30 +82,48 @@ const TreeView: React.FC<TreeViewProps> = ({
         selectionMode="single"
         onSelect={(e) => selectedComponent(e.node.key ? `${e.node.key}` : null)}
         expandedKeys={viewTreeState}
-        onToggle={(event) => setVewTreeState(event.value)}
+        onToggle={(event) => setViewTreeState(event.value)}
         nodeTemplate={(node) => {
           const componentTreeNode = node as ComponentTreeNode;
 
           return (
             <div className="flex items-center justify-between w-full">
               <div>{componentTreeNode.label}</div>
-              {componentTreeNode.isContainer && (
-                <Button
-                  icon="pi pi-plus"
-                  rounded
-                  text
-                  aria-label="Add"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (!vcl) return;
-                    onAddNodeClick?.(
-                      componentTreeNode.containerParent ?? null,
-                      componentTreeNode.key,
-                      componentTreeNode.type,
-                    );
-                  }}
-                />
-              )}
+              <div>
+                {componentTreeNode.isContainer ? (
+                  <Button
+                    icon="pi pi-plus"
+                    rounded
+                    text
+                    aria-label="Add"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!vcl) return;
+                      onAddNodeClick?.(
+                        componentTreeNode.containerParent ?? null,
+                        componentTreeNode.key,
+                        componentTreeNode.type,
+                      );
+                    }}
+                  />
+                ) : (
+                  <Button
+                    icon="pi pi-times"
+                    severity="danger"
+                    rounded
+                    text
+                    aria-label="Delete"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!vcl) return;
+                      onRemoveNodeClick?.(
+                        componentTreeNode.key,
+                        componentTreeNode.type,
+                      );
+                    }}
+                  />
+                )}
+              </div>
             </div>
           );
         }}
