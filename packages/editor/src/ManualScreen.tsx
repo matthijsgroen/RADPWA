@@ -43,6 +43,7 @@ import { useVsCodeState } from "./hooks/useVsCodeState";
 import { AddComponentPanel } from "./components/AddComponentPanel";
 import {
   addComponentToStructure,
+  rearrangeComponents,
   removeComponentFromStructure,
 } from "./mutations/addComponent";
 
@@ -265,6 +266,11 @@ const mainScreen = () => {
                         onRemoveNodeClick={(key, type) => {
                           mutateScreenStructure(
                             removeComponentFromStructure(key, type),
+                          );
+                        }}
+                        onRearrangeNode={(dragNode, dropNode, dropIndex) => {
+                          mutateScreenStructure(
+                            rearrangeComponents(dragNode, dropNode, dropIndex),
                           );
                         }}
                       />

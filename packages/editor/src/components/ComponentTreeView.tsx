@@ -4,12 +4,12 @@ import {
   RuiJSONFormat,
   RuiVisualComponent,
 } from "@rui/transform";
+import React from "react";
 import { PrimeIcons } from "primereact/api";
 import { Button } from "primereact/button";
 import { Tree } from "primereact/tree";
 import { TreeNode } from "primereact/treenode";
 import { IconType } from "primereact/utils";
-import React from "react";
 import { transformToTreeNode } from "~src/utils";
 
 export type ComponentTreeNode = {
@@ -37,6 +37,11 @@ type TreeViewProps = {
     nodeType: "data" | "visual",
   ) => void;
   onRemoveNodeClick?: (nodeKey: string, nodeType: "data" | "visual") => void;
+  onRearrangeNode?: (
+    dragNode: ComponentTreeNode,
+    dropNode: ComponentTreeNode,
+    dropIndex: number,
+  ) => void;
 };
 
 const TreeView: React.FC<TreeViewProps> = ({
@@ -47,8 +52,9 @@ const TreeView: React.FC<TreeViewProps> = ({
   selectedComponent,
   onAddNodeClick,
   onRemoveNodeClick,
+  onRearrangeNode,
 }) => {
-  const components: ComponentTreeNode[] = [
+  const [components, setComponents] = React.useState<ComponentTreeNode[]>([
     {
       key: "data-root",
       label: "Data",
@@ -73,16 +79,30 @@ const TreeView: React.FC<TreeViewProps> = ({
 
       children: transformToTreeNode(ruiComponents.composition, vcl),
     },
-  ];
+  ]);
 
   return (
     <>
       <Tree
         value={components}
-        selectionMode="single"
-        onSelect={(e) => selectedComponent(e.node.key ? `${e.node.key}` : null)}
         expandedKeys={viewTreeState}
+        selectionMode="single"
+        dragdropScope="componentTree"
+        onSelect={(e) => selectedComponent(e.node.key ? `${e.node.key}` : null)}
         onToggle={(event) => setViewTreeState(event.value)}
+        onDragDrop={(e) => {
+          console.log(e);
+          const dragNode = e.dragNode as ComponentTreeNode;
+          const dropNode = e.dropNode as ComponentTreeNode;
+          if (!dragNode || !dropNode) return;
+          if (!dropNode.isContainer) return;
+          if (dragNode.type !== dropNode.type) return;
+
+          const updatedTree = e.value as ComponentTreeNode[];
+
+          setComponents(updatedTree);
+          onRearrangeNode?.(dragNode, dropNode, e.dropIndex);
+        }}
         nodeTemplate={(node) => {
           const componentTreeNode = node as ComponentTreeNode;
 
