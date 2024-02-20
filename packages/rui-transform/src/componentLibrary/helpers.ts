@@ -105,6 +105,12 @@ export const getProductionType = (
   const typeNode =
     declaration && ts.isTypeNode(declaration) ? declaration : undefined;
 
+  if (productionTypeNode.aliasSymbol) {
+    return {
+      type: typeNode,
+      typeAsString: productionTypeNode.aliasSymbol.name,
+    };
+  }
   return {
     type: typeNode,
     typeAsString: typeNode

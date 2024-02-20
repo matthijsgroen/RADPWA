@@ -41,22 +41,24 @@ export const AddComponentPanel: React.FC<Props> = ({
         (item.info.isVisual && nodeType === "visual") ||
         (!item.info.isVisual && nodeType === "data");
 
+      if (properType && nodeType === "data" && requiredChildType) {
+        return item.info.produces?.typeAsString === requiredChildType;
+      }
+
       return properType;
     });
 
   const [selectedItem, setSelectedItem] = useState<Option | null>(null);
 
   return (
-    <>
+    <div className="flex flex-col gap-4">
       <ListBox
         options={options}
         optionLabel="name"
         value={selectedItem}
+        itemTemplate={(item) => <>{item.name}</>}
         onChange={(e) => setSelectedItem(e.value)}
       />
-      <p>
-        {parentComponent} - {containerName} - {requiredChildType} -{" "}
-      </p>
       <Button
         label="Add"
         disabled={selectedItem === null}
@@ -64,6 +66,6 @@ export const AddComponentPanel: React.FC<Props> = ({
           selectedItem && onComponentSelection?.(selectedItem.name)
         }
       />
-    </>
+    </div>
   );
 };

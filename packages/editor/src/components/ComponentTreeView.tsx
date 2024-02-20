@@ -98,9 +98,6 @@ const TreeView: React.FC<TreeViewProps> = ({
           if (!dropNode.isContainer) return;
           if (dragNode.type !== dropNode.type) return;
 
-          // const updatedTree = e.value as ComponentTreeNode[];
-
-          // setComponents(updatedTree);
           onRearrangeNode?.(dragNode, dropNode, e.dropIndex);
         }}
         nodeTemplate={(node) => {
