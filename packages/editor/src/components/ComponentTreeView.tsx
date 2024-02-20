@@ -54,7 +54,7 @@ const TreeView: React.FC<TreeViewProps> = ({
   onRemoveNodeClick,
   onRearrangeNode,
 }) => {
-  const [components, setComponents] = React.useState<ComponentTreeNode[]>([
+  const components = [
     {
       key: "data-root",
       label: "Data",
@@ -79,7 +79,7 @@ const TreeView: React.FC<TreeViewProps> = ({
 
       children: transformToTreeNode(ruiComponents.composition, vcl),
     },
-  ]);
+  ];
 
   return (
     <>
@@ -98,9 +98,9 @@ const TreeView: React.FC<TreeViewProps> = ({
           if (!dropNode.isContainer) return;
           if (dragNode.type !== dropNode.type) return;
 
-          const updatedTree = e.value as ComponentTreeNode[];
+          // const updatedTree = e.value as ComponentTreeNode[];
 
-          setComponents(updatedTree);
+          // setComponents(updatedTree);
           onRearrangeNode?.(dragNode, dropNode, e.dropIndex);
         }}
         nodeTemplate={(node) => {
