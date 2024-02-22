@@ -596,6 +596,7 @@ const createDataComponent = (
   vcl: ComponentLibraryMetaInformation,
 ): ts.PropertyAssignment => {
   const infoModel: ObjectLiteralElementLike[] = [];
+  infoModel.push(f.createPropertyAssignment("id", f.createStringLiteral(c.id)));
 
   if (c.props) {
     infoModel.push(
@@ -669,7 +670,26 @@ const createCompositionNode = (
   const capNodeId = capitalize(node.id);
   const componentInfo = vcl[node.component];
 
-  const attributes: ts.JsxAttributeLike[] = [];
+  const attributes: ts.JsxAttributeLike[] = [
+    f.createJsxAttribute(
+      f.createIdentifier("id"),
+      f.createStringLiteral(node.id),
+    ),
+  ];
+  if (componentInfo.produces) {
+    attributes.push(
+      f.createJsxAttribute(
+        f.createIdentifier("scopeResult"),
+        f.createJsxExpression(
+          undefined,
+          f.createPropertyAccessExpression(
+            f.createIdentifier("scope"),
+            f.createIdentifier(node.id),
+          ),
+        ),
+      ),
+    );
+  }
   if (node.props) {
     attributes.push(
       f.createJsxSpreadAttribute(
@@ -702,7 +722,7 @@ const createCompositionNode = (
       );
     });
 
-  if (componentInfo.produces || node.propsAsState) {
+  if (node.propsAsState) {
     attributes.push(
       f.createJsxSpreadAttribute(
         f.createPropertyAccessExpression(
@@ -813,15 +833,18 @@ export const convertJsonToRui = (
         true,
       ),
       ...conditionalStatements(
-        structure.componentLibrary,
+        structure.componentLibrary && fullFlatComponentList.length > 0,
         () => helpersImport(),
-        (value) => componentsImport(value),
+      ),
+      ...conditionalStatements(structure.componentLibrary, (value) =>
+        componentsImport(value),
       ),
       ...conditionalStatements(structure.eventHandlers, (handlers) =>
         eventHandlersImport(handlers),
       ),
-      ...conditionalStatements(structure.componentLibrary, () =>
-        defineComponentTypes(),
+      ...conditionalStatements(
+        structure.componentLibrary && fullFlatComponentList.length > 0,
+        () => defineComponentTypes(),
       ),
       ...conditionalStatements(hasProps, () =>
         defineInterface(structure.interface),

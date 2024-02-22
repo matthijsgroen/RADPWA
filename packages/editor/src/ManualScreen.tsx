@@ -24,7 +24,11 @@ import {
   RuiVisualComponent,
 } from "@rui/transform";
 import { ProgressSpinner } from "primereact/progressspinner";
-import { renameComponentId, updateProperty } from "./mutations/updateProperty";
+import {
+  renameComponentId,
+  updateEvent,
+  updateProperty,
+} from "./mutations/updateProperty";
 import { treeSearch } from "./mutations/treeSearch";
 import { CodeHighlighter } from "./components/CodePreview";
 import { propertyEdit } from "./propertyEdit";
@@ -50,7 +54,7 @@ import {
 const stringValue = (
   data: PropertyItem,
   component: RuiDataComponent | RuiVisualComponent | undefined,
-  onOpenExternal?: (type: "function", name: string) => void,
+  onOpenExternal?: (name: string) => void,
 ): React.ReactNode => {
   const stateMarker = data.exposedAsState ? "🗒️ " : "";
   if (data.name === "id") {
@@ -92,7 +96,7 @@ const stringValue = (
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
-              onOpenExternal("function", data.value);
+              onOpenExternal(data.value);
             }}
           />
         )}
@@ -214,13 +218,36 @@ const mainScreen = () => {
       setSelectedComponentId(newId);
     } else {
       mutateScreenStructure(
-        updateProperty(e, selectedComponent.id, selectedComponentInfo),
+        updateProperty(
+          e.rowData.name,
+          e.newValue,
+          selectedComponent.id,
+          selectedComponentInfo,
+        ),
       );
     }
   };
 
-  const openExternal = (type: "function", name: string) => {
+  const openExternal = (name: string) => {
     postMessage({ type: CommandType.OPEN_FUNCTION, data: name });
+  };
+
+  const createExternal = async (
+    name: string,
+    componentId: string,
+    component: string,
+    event: string,
+  ) => {
+    if (!selectedComponent) return;
+    postMessage({
+      type: CommandType.CREATE_FUNCTION,
+      data: {
+        name,
+        component,
+        componentId,
+        event,
+      },
+    });
   };
 
   const [addDialogOpen, setAddDialogOpen] = useState<
@@ -349,8 +376,8 @@ const mainScreen = () => {
         </SplitterPanel>
         <SplitterPanel>
           <Panel
+            className="w-full flex flex-col"
             header={`Inspector (${selectedComponent ? selectedComponent.id : "none"})`}
-            className="w-full"
           >
             <TabView
               activeIndex={activeObjectTab}
@@ -367,10 +394,21 @@ const mainScreen = () => {
                 >
                   <Column field="name" header="Name"></Column>
                   <Column
-                    // field="value"
                     header="Value"
                     body={(data) => stringValue(data, selectedComponent)}
-                    editor={propertyEdit}
+                    editor={(options) =>
+                      propertyEdit(options, (event: string) => {
+                        if (!selectedComponent) return;
+                        const functionName = `${selectedComponentId}${event.slice(2)}`;
+
+                        createExternal(
+                          functionName,
+                          selectedComponent.id,
+                          selectedComponent.component,
+                          event,
+                        );
+                      })
+                    }
                     onCellEditComplete={onCellEditComplete}
                   ></Column>
                 </DataTable>
@@ -385,12 +423,22 @@ const mainScreen = () => {
                 >
                   <Column field="name" header="Name"></Column>
                   <Column
-                    // field="value"
                     header="Value"
                     body={(data) =>
                       stringValue(data, selectedComponent, openExternal)
                     }
-                    editor={propertyEdit}
+                    editor={(options) =>
+                      propertyEdit(options, (event: string) => {
+                        if (!selectedComponent) return;
+                        const functionName = `${selectedComponentId}${event.slice(2)}`;
+                        createExternal(
+                          functionName,
+                          selectedComponent.id,
+                          selectedComponent.component,
+                          event,
+                        );
+                      })
+                    }
                     onCellEditComplete={onCellEditComplete}
                   ></Column>
                 </DataTable>

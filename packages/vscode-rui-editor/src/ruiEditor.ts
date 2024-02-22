@@ -9,8 +9,12 @@ import {
   convertJsonToRui,
   defineScopeType,
   getFlatComponentList,
+  ComponentMetaInformation,
+  RuiDataComponent,
+  RuiVisualComponent,
 } from "@rui/transform";
 import getRelativePath from "get-relative-path";
+import { produce } from "immer";
 
 const getEventHandlerFileUri = (
   document: vscode.TextDocument,
@@ -27,6 +31,76 @@ const getEventHandlerFileUri = (
 
   return vscode.Uri.file(path.join("/"));
 };
+
+export const selectAll = <R extends ts.Node>(
+  nodes: ts.Node[],
+  selector: readonly [...ts.SyntaxKind[], R["kind"]],
+): R[] => {
+  const [first, ...rest] = selector;
+
+  const found: ts.Node[] = [];
+  nodes.forEach((node) =>
+    ts.forEachChild(node, (child) => {
+      if (child.kind === first) {
+        found.push(child);
+      }
+    }),
+  );
+
+  if (rest.length === 0 || found.length === 0) {
+    return found as R[];
+  }
+  return selectAll(found, rest as [...ts.SyntaxKind[], R["kind"]]);
+};
+
+export const treeSearch = <T extends RuiDataComponent | RuiVisualComponent>(
+  id: string,
+  items: T[],
+): T | undefined => {
+  for (const i of items) {
+    if (i.id === id) {
+      return i;
+    }
+    if (i.childContainers) {
+      for (const containerName in i.childContainers) {
+        const result = treeSearch<T>(
+          id,
+          i.childContainers[containerName] as T[],
+        );
+        if (result) {
+          return result;
+        }
+      }
+    }
+  }
+};
+
+const updateEvent = (
+  name: string,
+  callbackName: string,
+  componentId: string,
+  selectedComponentInfo: ComponentMetaInformation | undefined,
+) =>
+  produce<RuiJSONFormat>((draft) => {
+    if (!selectedComponentInfo) {
+      return;
+    }
+    if (selectedComponentInfo.isVisual) {
+      // component is in the visual tree
+      const component = treeSearch(componentId, draft.composition);
+      if (component) {
+        component.events ??= {};
+        component.events[name] = callbackName;
+      }
+    } else {
+      // component is in the data tree
+      const component = treeSearch(componentId, draft.components);
+      if (component) {
+        component.events ??= {};
+        component.events[name] = callbackName;
+      }
+    }
+  });
 
 export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
   private printer: ts.Printer;
@@ -100,9 +174,9 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
               const receivedData = message.data;
               console.log("** Received updated JSON from the webview **");
               const Rui = await convertJsonToRui(receivedData, vcl);
-              this.editDocument(document, Rui);
+              await this.editDocument(document, Rui);
               return;
-            case "OPEN_FUNCTION":
+            case "OPEN_FUNCTION": {
               const functionName = message.data;
               console.log(
                 "** Received request to open function **",
@@ -135,6 +209,127 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
                 });
 
               return;
+            }
+            case "CREATE_FUNCTION": {
+              const createFunctionData = message.data;
+              console.log(
+                "** Received request to open function **",
+                createFunctionData,
+              );
+
+              const jsonDocument = this.getDocumentAsJson(
+                document,
+                vcl,
+                componentsPath,
+              );
+
+              let eventHandlerFile = jsonDocument.eventHandlers;
+              if (eventHandlerFile === null) {
+                // Generate event file
+                const newHandlerFile = await this.createEventHandlerFile(
+                  jsonDocument,
+                  document,
+                  vcl,
+                );
+                eventHandlerFile = newHandlerFile;
+              }
+
+              const setEventFile: RuiJSONFormat = updateEvent(
+                createFunctionData.event,
+                createFunctionData.name,
+                createFunctionData.componentId,
+                vcl[createFunctionData.component],
+              )({
+                ...jsonDocument,
+                eventHandlers: eventHandlerFile,
+              });
+              const updatedContent = await convertJsonToRui(setEventFile, vcl);
+              await this.editDocument(document, updatedContent);
+
+              const uri = getEventHandlerFileUri(document, eventHandlerFile);
+              let doc = await vscode.workspace.openTextDocument(uri);
+              const sourceFile = ts.createSourceFile(
+                "f.ts",
+                doc.getText(),
+                ts.ScriptTarget.Latest,
+              );
+
+              const compInfo = vcl[createFunctionData.component];
+              const eventSignature =
+                compInfo.events[createFunctionData.event].type;
+              if (!eventSignature || !ts.isFunctionTypeNode(eventSignature)) {
+                return;
+              }
+
+              const existingFunctionHandlers =
+                selectAll<ts.ObjectLiteralExpression>(
+                  [sourceFile],
+                  [
+                    ts.SyntaxKind.ExportAssignment,
+                    ts.SyntaxKind.ArrowFunction,
+                    ts.SyntaxKind.ParenthesizedExpression,
+                    ts.SyntaxKind.ObjectLiteralExpression,
+                  ],
+                )[0];
+
+              const updatedHandlers = ts.factory.createObjectLiteralExpression([
+                ...existingFunctionHandlers.properties,
+                ts.factory.createPropertyAssignment(
+                  createFunctionData.name,
+                  ts.factory.createArrowFunction(
+                    undefined,
+                    undefined,
+                    eventSignature.parameters,
+                    eventSignature.type,
+                    ts.factory.createToken(
+                      ts.SyntaxKind.EqualsGreaterThanToken,
+                    ),
+                    ts.factory.createBlock([], true),
+                  ),
+                ),
+              ]);
+              const printer = ts.createPrinter();
+              const newCode = printer.printNode(
+                ts.EmitHint.Unspecified,
+                updatedHandlers,
+                sourceFile,
+              );
+
+              const edit = new vscode.WorkspaceEdit();
+
+              const startPosition = sourceFile.getLineAndCharacterOfPosition(
+                existingFunctionHandlers.getStart(sourceFile),
+              );
+              const endPosition = sourceFile.getLineAndCharacterOfPosition(
+                existingFunctionHandlers.getEnd(),
+              );
+              // Replace the entire document
+              edit.replace(
+                uri,
+                new vscode.Range(
+                  startPosition.line,
+                  startPosition.character,
+                  endPosition.line,
+                  endPosition.character,
+                ),
+                newCode,
+              );
+
+              // Apply the edits
+              await vscode.workspace.applyEdit(edit);
+              vscode.window
+                .showTextDocument(doc, vscode.ViewColumn.Beside)
+                .then(() => {
+                  vscode.commands.executeCommand(
+                    "editor.action.formatDocument",
+                  );
+                  vscode.commands.executeCommand(
+                    "workbench.action.quickOpen",
+                    `@${createFunctionData.name}`,
+                  );
+                });
+              return;
+            }
           }
         });
 
@@ -198,6 +393,27 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
     });
   }
 
+  private async createEventHandlerFile(
+    jsonStruct: RuiJSONFormat,
+    document: vscode.TextDocument,
+    vcl: ComponentLibraryMetaInformation,
+  ): Promise<string> {
+    const baseName = document.fileName.split("/").at(-1)?.split(".").at(0);
+    const eventHandlerFile = `./${baseName}.events`;
+    vscode.window.showInformationMessage(`created ${eventHandlerFile}`);
+    const uri = getEventHandlerFileUri(document, eventHandlerFile);
+
+    const encoder = new TextEncoder();
+    const fileData = encoder.encode(
+      `import type { Scope } from "./${baseName}.rui";\n\nexport default (scope: Scope) => ({});`,
+    );
+    const edit = new vscode.WorkspaceEdit();
+    edit.createFile(uri, { ignoreIfExists: true, contents: fileData });
+    await vscode.workspace.applyEdit(edit);
+
+    return eventHandlerFile;
+  }
+
   private getHtmlForWebview(webview: vscode.Webview): string {
     const js = webview.asWebviewUri(
       vscode.Uri.joinPath(
@@ -241,7 +457,10 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
 			</html>`;
   }
 
-  private editDocument(document: vscode.TextDocument, Rui: string) {
+  private async editDocument(
+    document: vscode.TextDocument,
+    Rui: string,
+  ): Promise<void> {
     const edit = new vscode.WorkspaceEdit();
 
     // Replace the entire document
@@ -252,7 +471,7 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
     );
 
     // Apply the edits
-    vscode.workspace.applyEdit(edit);
+    await vscode.workspace.applyEdit(edit);
   }
 
   private getDocumentAsJson(
@@ -270,7 +489,7 @@ export class RuiEditorProvider implements vscode.CustomTextEditorProvider {
     if (text.trim() === "") {
       // initialize document
       convertJsonToRui(result, vcl).then((tsxCode) => {
-        this.editDocument(document, tsxCode);
+        return this.editDocument(document, tsxCode);
       });
     }
 

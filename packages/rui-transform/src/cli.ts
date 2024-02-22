@@ -2,7 +2,7 @@
 import { Command } from "commander";
 import { convertRuiToJson } from "./ruiToJson/convert";
 import { convertJsonToRui } from "./jsonToRui/convert";
-import ts, { createCompilerHost } from "typescript";
+import ts, { createCompilerHost, isTypeNode } from "typescript";
 import { getProjectComponentsFromType } from "./componentLibrary/getProjectComponentsFromType";
 import { readFile } from "fs/promises";
 
@@ -33,8 +33,23 @@ export const run = (args: string[]) => {
         program,
         "./rapid-components.tsx",
       );
-      const jsonResult = await convertRuiToJson(filePath, contents, vcl);
-      console.log(JSON.stringify(jsonResult, undefined, 2));
+      console.log(
+        JSON.stringify(
+          vcl,
+          (_key, value) => {
+            if (value && typeof value === "object" && isTypeNode(value)) {
+              return undefined;
+            }
+            return value;
+          },
+          2,
+        ),
+      );
+      // const jsonResult = await convertRuiToJson(filePath, contents, vcl);
+      // console.log(JSON.stringify(jsonResult, undefined, 2));
+
+      // const tsxResult = await convertJsonToRui(jsonResult, vcl);
+      // console.log(tsxResult);
     });
 
   program

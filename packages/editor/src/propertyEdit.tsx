@@ -4,6 +4,7 @@ import { InputText } from "primereact/inputtext";
 import { TriStateCheckbox } from "primereact/tristatecheckbox";
 import React, { PropsWithChildren } from "react";
 import { isFunction } from "./utils";
+import { Button } from "primereact/button";
 
 const EditorWithState: React.FC<
   PropsWithChildren<{
@@ -29,7 +30,10 @@ const EditorWithState: React.FC<
   </>
 );
 
-export const propertyEdit = (options: ColumnEditorOptions) => {
+export const propertyEdit = (
+  options: ColumnEditorOptions,
+  createExternal: (event: string) => void,
+) => {
   if (options.rowData.name === "id") {
     const value = {
       value: options.rowData.value,
@@ -94,14 +98,16 @@ export const propertyEdit = (options: ColumnEditorOptions) => {
     );
   }
   if (isFunction(options.rowData)) {
-    const value = options.value ?? options.rowData.value;
     return (
-      <InputText
-        size={"small"}
-        keyfilter={"alphanum"}
-        value={value}
-        onChange={(e) => options.editorCallback!(e.target.value)}
-      />
+      <div className="flex flex-row gap-4">
+        <Button
+          label="..."
+          size="small"
+          onClick={() => {
+            createExternal(options.rowData.name);
+          }}
+        />
+      </div>
     );
   }
 

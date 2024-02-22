@@ -10,7 +10,9 @@ export type ComponentDefinition<
 } & (void extends TProduceResult
   ? {}
   : {
-      produce: (props: Partial<TProps & TEvents>) => TProduceResult;
+      produce: (
+        props: Partial<TProps & TEvents> & { id: string },
+      ) => TProduceResult;
     }) & {
     //https://github.com/microsoft/TypeScript/issues/31940#issuecomment-839659248
     __RuiComponentBrand?: undefined;
@@ -25,7 +27,12 @@ export type VisualComponentDefinition<
   /**
    * Visual Component
    */
-  vc: (props: Partial<TProps & TEvents & TChildren>) => ReactNode;
+  vc: (
+    props: Partial<TProps & TEvents & TChildren> & {
+      id: string;
+      scopeResult?: TProduceResult;
+    },
+  ) => ReactNode;
 } & {
   //https://github.com/microsoft/TypeScript/issues/31940#issuecomment-839659248
   __RuiVisualComponentBrand?: undefined;

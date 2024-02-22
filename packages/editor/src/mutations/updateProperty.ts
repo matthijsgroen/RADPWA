@@ -6,7 +6,6 @@ import {
   RuiVisualComponent,
 } from "@rui/transform";
 import { produce } from "immer";
-import { ColumnEvent } from "primereact/column";
 import { traverse, treeSearch } from "./treeSearch";
 import { isRef } from "~src/utils";
 
@@ -26,7 +25,8 @@ const updatePropsAsState = <T extends RuiDataComponent | RuiVisualComponent>(
 };
 
 export const updateProperty = (
-  e: ColumnEvent,
+  name: string,
+  value: { value: unknown; exposedAsState: boolean } | undefined,
   componentId: string,
   selectedComponentInfo: ComponentMetaInformation | undefined,
 ) =>
@@ -37,22 +37,20 @@ export const updateProperty = (
     if (selectedComponentInfo.isVisual) {
       // component is in the visual tree
       const component = treeSearch(componentId, draft.composition);
-      const propName = e.rowData.name;
-      if (e.newValue && component) {
-        updatePropsAsState(component, propName, e.newValue.exposedAsState);
+      if (value && component) {
+        updatePropsAsState(component, name, value.exposedAsState);
 
         component.props ??= {};
-        component.props[propName] = e.newValue.value;
+        component.props[name] = value.value;
       }
     } else {
       // component is in the data tree
       const component = treeSearch(componentId, draft.components);
-      const propName = e.rowData.name;
-      if (e.newValue && component) {
-        updatePropsAsState(component, propName, e.newValue.exposedAsState);
+      if (value && component) {
+        updatePropsAsState(component, name, value.exposedAsState);
 
         component.props ??= {};
-        component.props[propName] = e.newValue.value;
+        component.props[name] = value.value;
       }
     }
   });
@@ -68,8 +66,12 @@ const updateComponentPropRefs = (
   const componentInfo = vcl[componentType];
   for (const key in props) {
     const propInfo = componentInfo.properties[key];
+    if (!propInfo) continue;
 
-    if (isRef({ ...props[key], type: propInfo.typeAsString })) {
+    if (
+      propInfo.typeAsString &&
+      isRef({ ...props[key], type: propInfo.typeAsString })
+    ) {
       const reference: string = props[key].ref;
 
       const updatedValue = reference
