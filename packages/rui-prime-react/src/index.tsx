@@ -118,7 +118,7 @@ const InputText: VisualComponentDefinition<
   { value: string }
 > = {
   produce: (props) => {
-    const [value, setValue] = useState<string>(props.value);
+    const [value, setValue] = useState<string>(props.value ?? "");
     return {
       get value() {
         return value;
