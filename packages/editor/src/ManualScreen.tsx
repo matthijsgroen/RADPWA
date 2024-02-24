@@ -26,7 +26,6 @@ import {
 import { ProgressSpinner } from "primereact/progressspinner";
 import {
   renameComponentId,
-  updateEvent,
   updateProperty,
 } from "./mutations/updateProperty";
 import { treeSearch } from "./mutations/treeSearch";
