@@ -30,8 +30,7 @@ export type VisualComponentDefinition<
   vc: (
     props: Partial<TProps & TEvents & TChildren> & {
       id: string;
-      scopeResult?: TProduceResult;
-    },
+    } & (void extends TProduceResult ? {} : { scopeResult: TProduceResult }),
   ) => ReactNode;
 } & {
   //https://github.com/microsoft/TypeScript/issues/31940#issuecomment-839659248

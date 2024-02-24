@@ -15,10 +15,6 @@
   "contributes": {
     "commands": [
       {
-        "command": "rad-generator.radEditor",
-        "title": "Rapid Application Development (RAD) Editor"
-      },
-      {
         "command": "rui.showSource",
         "title": "Show TSX Source",
         "icon": "$(file-code)"
