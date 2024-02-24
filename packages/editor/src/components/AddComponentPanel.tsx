@@ -58,6 +58,9 @@ export const AddComponentPanel: React.FC<Props> = ({
         value={selectedItem}
         itemTemplate={(item) => <>{item.name}</>}
         onChange={(e) => setSelectedItem(e.value)}
+        onDoubleClick={(e) => {
+          selectedItem && onComponentSelection?.(selectedItem.name);
+        }}
       />
       <Button
         label="Add"
