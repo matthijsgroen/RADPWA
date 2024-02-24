@@ -8,7 +8,7 @@ export const exposePropsAsState = <
   original: TOriginal,
   props: TProps,
   ...keys: TPropKey[]
-): Pick<TProps, TPropKey> => {
+): Pick<TProps, TPropKey> & TOriginal => {
   const [values, updateValues] = useState(keys.map((k) => props[k]));
   for (const keyIndex in keys) {
     const key = keys[keyIndex];
