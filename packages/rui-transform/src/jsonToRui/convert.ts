@@ -178,6 +178,7 @@ export const mergeType = (
           intersection[existingLiteral] = f.createTypeLiteralNode(
             propSignatures.concat(item.members),
           );
+          continue;
         }
       }
 
@@ -668,7 +669,7 @@ const createCompositionNode = (
 ) => {
   const usesChildren = node.childContainers?.children?.length;
   const capNodeId = capitalize(node.id);
-  const componentInfo = vcl[node.component];
+  // const componentInfo = vcl[node.component];
 
   const attributes: ts.JsxAttributeLike[] = [
     f.createJsxAttribute(
@@ -676,20 +677,20 @@ const createCompositionNode = (
       f.createStringLiteral(node.id),
     ),
   ];
-  if (componentInfo.produces) {
-    attributes.push(
-      f.createJsxAttribute(
-        f.createIdentifier("scopeResult"),
-        f.createJsxExpression(
-          undefined,
-          f.createPropertyAccessExpression(
-            f.createIdentifier("scope"),
-            f.createIdentifier(node.id),
-          ),
-        ),
-      ),
-    );
-  }
+  // if (componentInfo.produces) {
+  //   attributes.push(
+  //     f.createJsxAttribute(
+  //       f.createIdentifier("scopeResult"),
+  //       f.createJsxExpression(
+  //         undefined,
+  //         f.createPropertyAccessExpression(
+  //           f.createIdentifier("scope"),
+  //           f.createIdentifier(node.id),
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
   if (node.props) {
     attributes.push(
       f.createJsxSpreadAttribute(
